@@ -1,8 +1,6 @@
 class AttributeTranslator {
   AttributeTranslator._();
 
-  /// Phrase-level translations (matched first, longest match wins).
-  /// Order matters: longer phrases should come before shorter substrings.
   static const _phraseTranslations = <String, String>{
     'seat fabric': 'قماش المقعد',
     'beige color': 'لون بيج',
@@ -11,9 +9,9 @@ class AttributeTranslator {
     'dark brown': 'بني غامق',
     'light brown': 'بني فاتح',
     'natural wood': 'خشب طبيعي',
+    'Hand rest': 'مسند اليد',
   };
 
-  /// Single-word translations (applied after phrase translations).
   static const _wordTranslations = <String, String>{
     'color': 'اللون',
     'colour': 'اللون',
@@ -35,17 +33,21 @@ class AttributeTranslator {
     'black': 'أسود',
     'brown': 'بني',
     'beige': 'بيج',
-    'grey': 'رمادي',
-    'gray': 'رمادي',
+    'grey': 'رمادى',
+    'gray': 'رمادى',
     'red': 'أحمر',
     'blue': 'أزرق',
     'green': 'أخضر',
     'yellow': 'أصفر',
     'pink': 'وردي',
     'cm': 'سم',
+    'transperant': 'شفاف',
+    'without': 'بدون',
+    'with': 'مع',
+    'fixed': 'ثابت',
+    'movable': 'متحرك',
   };
 
-  /// Translates an attribute display string from English to Arabic.
   static String translate(String input) {
     var result = input;
 

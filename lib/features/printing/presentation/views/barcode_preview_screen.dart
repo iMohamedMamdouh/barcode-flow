@@ -6,11 +6,10 @@ import 'package:printing/printing.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/responsive_helper.dart';
 import '../../../../core/utils/service_locator.dart';
-import '../../domain/repos/printing_repo.dart';
+import '../../domain/repos/printing_repo.dart' show PrintingRepo;
 import '../cubits/printing_cubit.dart';
 import '../cubits/printing_state.dart';
 import '../widgets/barcode_label_widget.dart';
-import '../widgets/label_size_selector_widget.dart';
 
 class BarcodePreviewScreen extends StatelessWidget {
   final Map<String, dynamic> data;
@@ -26,22 +25,16 @@ class BarcodePreviewScreen extends StatelessWidget {
   }
 }
 
-class _BarcodePreviewBody extends StatefulWidget {
+class _BarcodePreviewBody extends StatelessWidget {
   final Map<String, dynamic> data;
 
   const _BarcodePreviewBody({required this.data});
 
-  @override
-  State<_BarcodePreviewBody> createState() => _BarcodePreviewBodyState();
-}
-
-class _BarcodePreviewBodyState extends State<_BarcodePreviewBody> {
-  LabelSize _labelSize = LabelSize.medium;
-
-  String get productName => widget.data['productName'] as String? ?? '';
-  String get barcode => widget.data['barcode'] as String? ?? '';
-  String? get sku => widget.data['defaultCode'] as String?;
-  int get quantity => widget.data['quantity'] as int? ?? 1;
+  String get productName => data['productName'] as String? ?? '';
+  String get barcode => data['barcode'] as String? ?? '';
+  String? get variantName => data['variantName'] as String?;
+  String? get imageBase64 => data['imageBase64'] as String?;
+  int get quantity => data['quantity'] as int? ?? 1;
 
   @override
   Widget build(BuildContext context) {
@@ -73,11 +66,8 @@ class _BarcodePreviewBodyState extends State<_BarcodePreviewBody> {
                   children: [
                     _buildPreviewSection(),
                     const SizedBox(height: 24),
-                    LabelSizeSelectorWidget(
-                      selectedSize: _labelSize,
-                      onChanged: (size) => setState(() => _labelSize = size),
-                    ),
-                    const SizedBox(height: 16),
+                    _buildInfoRow('حجم الورقة', '4 × 6 بوصة'),
+                    const SizedBox(height: 12),
                     _buildInfoRow('عدد النسخ', '$quantity'),
                     const SizedBox(height: 32),
                     _buildGenerateButton(context, state),
@@ -108,7 +98,7 @@ class _BarcodePreviewBodyState extends State<_BarcodePreviewBody> {
         BarcodeLabelWidget(
           productName: productName,
           barcode: barcode,
-          sku: sku,
+          variantName: variantName,
         ),
       ],
     );
@@ -153,9 +143,9 @@ class _BarcodePreviewBodyState extends State<_BarcodePreviewBody> {
               context.read<PrintingCubit>().generateLabel(
                     productName: productName,
                     barcode: barcode,
-                    sku: sku,
+                    variantName: variantName,
+                    imageBase64: imageBase64,
                     quantity: quantity,
-                    labelSize: _labelSize,
                   );
             },
       icon: isLoading

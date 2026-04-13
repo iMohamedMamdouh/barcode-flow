@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-import '../../../../config/routes/app_routes.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/responsive_helper.dart';
 import '../../../../core/utils/service_locator.dart';
@@ -13,6 +12,7 @@ import '../../domain/entities/product_variant_entity.dart';
 import '../../domain/repos/products_repo.dart';
 import '../cubits/product_details_cubit.dart';
 import '../cubits/product_details_state.dart';
+import '../widgets/print_action_dialog_widget.dart';
 
 class ProductVariantsScreen extends StatelessWidget {
   final ProductEntity product;
@@ -157,16 +157,13 @@ class ProductVariantsScreen extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 8),
       child: InkWell(
         onTap: () {
-          Navigator.of(context).pushNamed(
-            AppRoutes.productDetails,
-            arguments: {
-              'productName': variant.name,
-              'variantId': variant.id,
-              'barcode': variant.barcode,
-              'defaultCode': variant.defaultCode,
-              'imageBase64': variant.imageBase64,
-              'attributeValues': variant.attributeValues,
-            },
+          PrintActionDialogWidget.show(
+            context,
+            productName: variant.name,
+            barcode: variant.barcode,
+            defaultCode: variant.defaultCode,
+            imageBase64: variant.imageBase64,
+            variantName: variant.attributesSummary,
           );
         },
         borderRadius: BorderRadius.circular(12),

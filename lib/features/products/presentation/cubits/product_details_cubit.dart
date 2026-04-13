@@ -13,6 +13,8 @@ class ProductDetailsCubit extends Cubit<ProductDetailsState> {
 
     final result = await _productsRepo.getProductVariants(templateId);
 
+    if (isClosed) return;
+
     result.fold(
       (failure) => emit(ProductVariantsError(failure.message)),
       (variants) => emit(ProductVariantsLoaded(variants)),

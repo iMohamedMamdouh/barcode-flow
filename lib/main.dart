@@ -6,6 +6,9 @@ import 'core/constants/app_constants.dart';
 import 'core/theme/app_theme.dart';
 import 'core/utils/service_locator.dart';
 
+final RouteObserver<ModalRoute<void>> routeObserver =
+    RouteObserver<ModalRoute<void>>();
+
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
   setupServiceLocator();
@@ -28,6 +31,7 @@ class WasilaahApp extends StatelessWidget {
         GlobalWidgetsLocalizations.delegate,
         GlobalCupertinoLocalizations.delegate,
       ],
+      navigatorObservers: [routeObserver],
       initialRoute: AppRoutes.splash,
       onGenerateRoute: AppRoutes.generateRoute,
       builder: (context, child) {

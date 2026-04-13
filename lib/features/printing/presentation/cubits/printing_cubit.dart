@@ -1,5 +1,4 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
-import '../../../../core/constants/app_constants.dart';
 import '../../domain/repos/printing_repo.dart';
 import 'printing_state.dart';
 
@@ -11,23 +10,24 @@ class PrintingCubit extends Cubit<PrintingState> {
   Future<void> generateLabel({
     required String productName,
     required String barcode,
-    String? sku,
+    String? variantName,
+    String? imageBase64,
     required int quantity,
-    required LabelSize labelSize,
   }) async {
     emit(const PrintingGenerating());
 
     try {
       final pdfData = await _printingRepo.generatePdfLabel(
-        companyName: AppConstants.appName,
         productName: productName,
         barcode: barcode,
-        sku: sku,
+        variantName: variantName,
+        imageBase64: imageBase64,
         quantity: quantity,
-        labelSize: labelSize,
       );
+      if (isClosed) return;
       emit(PrintingReady(pdfData));
     } catch (e) {
+      if (isClosed) return;
       emit(PrintingError('خطأ في إنشاء الملصق: $e'));
     }
   }

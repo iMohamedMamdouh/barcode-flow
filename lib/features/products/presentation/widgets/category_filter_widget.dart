@@ -52,18 +52,33 @@ class CategoryFilterWidget extends StatelessWidget {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(
-                category.icon,
-                size: 18,
-                color: isSelected ? AppColors.onPrimary : AppColors.textSecondary,
-              ),
+              if (category.iconPath != null)
+                Image.asset(
+                  category.iconPath!,
+                  width: 18,
+                  height: 18,
+                  color:
+                      isSelected
+                          ? AppColors.onPrimary
+                          : AppColors.textSecondary,
+                )
+              else if (category.icon != null)
+                Icon(
+                  category.icon,
+                  size: 18,
+                  color:
+                      isSelected
+                          ? AppColors.onPrimary
+                          : AppColors.textSecondary,
+                ),
               const SizedBox(width: 6),
               Text(
                 category.nameAr,
                 style: GoogleFonts.tajawal(
                   fontSize: 13,
                   fontWeight: FontWeight.w600,
-                  color: isSelected ? AppColors.onPrimary : AppColors.textPrimary,
+                  color:
+                      isSelected ? AppColors.onPrimary : AppColors.textPrimary,
                 ),
               ),
             ],

@@ -1,5 +1,6 @@
 import 'dart:typed_data';
 
+import 'package:flutter/services.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
@@ -10,52 +11,68 @@ import '../../domain/repos/printing_repo.dart';
 class PrintingRepoImpl implements PrintingRepo {
   pw.Font? _arabicRegular;
   pw.Font? _arabicBold;
+  pw.Font? _notoArabicRegular;
+  pw.Font? _notoArabicBold;
+  pw.MemoryImage? _logoImage;
 
-  Future<void> _loadFonts() async {
+  List<pw.Font> get _fallbackFonts => [
+        _arabicRegular!,
+        _arabicBold!,
+        _notoArabicRegular!,
+        _notoArabicBold!,
+        pw.Font.helvetica(),
+        pw.Font.helveticaBold(),
+      ];
+
+  Future<void> _loadAssets() async {
     _arabicRegular ??= await PdfGoogleFonts.tajawalRegular();
     _arabicBold ??= await PdfGoogleFonts.tajawalBold();
+    _notoArabicRegular ??= await PdfGoogleFonts.notoSansArabicRegular();
+    _notoArabicBold ??= await PdfGoogleFonts.notoSansArabicBold();
+    if (_logoImage == null) {
+      final logoData = await rootBundle.load('assets/images/logo.png');
+      _logoImage = pw.MemoryImage(logoData.buffer.asUint8List());
+    }
   }
 
   @override
   Future<Uint8List> generatePdfLabel({
-    required String companyName,
     required String productName,
     required String barcode,
-    String? sku,
+    String? variantName,
+    String? imageBase64,
     required int quantity,
-    required LabelSize labelSize,
   }) async {
-    await _loadFonts();
+    await _loadAssets();
 
     final pdf = pw.Document();
 
-    final pageWidth = labelSize.widthMm * PdfPageFormat.mm;
-    final pageHeight = labelSize.heightMm * PdfPageFormat.mm;
-
     final pageFormat = PdfPageFormat(
-      pageWidth,
-      pageHeight,
-      marginAll: 2 * PdfPageFormat.mm,
+      PrintingRepo.labelWidthMm * PdfPageFormat.mm,
+      PrintingRepo.labelHeightMm * PdfPageFormat.mm,
+      marginAll: 5 * PdfPageFormat.mm,
     );
 
     final barcodeType = BarcodeHelper.detectType(barcode);
-    final isSmall = labelSize == LabelSize.small;
 
-    final boldStyle = pw.TextStyle(
+    final productNameStyle = pw.TextStyle(
       font: _arabicBold,
-      fontFallback: [_arabicRegular!],
-      fontSize: isSmall ? 6 : 8,
+      fontFallback: _fallbackFonts,
+      fontSize: 15,
     );
 
-    final regularStyle = pw.TextStyle(
+    final variantStyle = pw.TextStyle(
       font: _arabicRegular,
-      fontFallback: [_arabicBold!],
-      fontSize: isSmall ? 5 : 7,
+      fontFallback: _fallbackFonts,
+      fontSize: 12,
+      color: PdfColor.fromHex('#444444'),
     );
 
-    final smallStyle = pw.TextStyle(
+    final barcodeTextStyle = pw.TextStyle(
       font: _arabicRegular,
-      fontSize: isSmall ? 4 : 5,
+      fontFallback: _fallbackFonts,
+      fontSize: 10,
+      letterSpacing: 1.5,
     );
 
     for (int i = 0; i < quantity; i++) {
@@ -64,46 +81,54 @@ class PrintingRepoImpl implements PrintingRepo {
           pageFormat: pageFormat,
           textDirection: pw.TextDirection.rtl,
           build: (pw.Context context) {
-            return pw.Column(
-              mainAxisAlignment: pw.MainAxisAlignment.center,
-              crossAxisAlignment: pw.CrossAxisAlignment.center,
-              children: [
-                pw.Text(
-                  companyName,
-                  style: boldStyle,
-                  textAlign: pw.TextAlign.center,
-                  textDirection: pw.TextDirection.rtl,
-                ),
-                pw.SizedBox(height: isSmall ? 1 : 2),
-                pw.Text(
-                  productName,
-                  style: regularStyle,
-                  textAlign: pw.TextAlign.center,
-                  textDirection: pw.TextDirection.rtl,
-                  maxLines: 2,
-                  overflow: pw.TextOverflow.clip,
-                ),
-                if (sku != null) ...[
-                  pw.SizedBox(height: 1),
-                  pw.Text(
-                    sku,
-                    style: smallStyle,
-                    textAlign: pw.TextAlign.center,
+            return pw.Center(
+              child: pw.Column(
+                mainAxisAlignment: pw.MainAxisAlignment.center,
+                crossAxisAlignment: pw.CrossAxisAlignment.center,
+                mainAxisSize: pw.MainAxisSize.min,
+                children: [
+                  pw.Image(
+                    _logoImage!,
+                    width: 45 * PdfPageFormat.mm,
+                    fit: pw.BoxFit.contain,
+                  ),
+                  pw.SizedBox(height: 14),
+                  pw.SizedBox(
+                    width: double.infinity,
+                    child: pw.Text(
+                      productName,
+                      style: productNameStyle,
+                      textAlign: pw.TextAlign.center,
+                      textDirection: pw.TextDirection.rtl,
+                      maxLines: 3,
+                      overflow: pw.TextOverflow.clip,
+                    ),
+                  ),
+                  if (variantName != null && variantName.isNotEmpty) ...[
+                    pw.SizedBox(height: 6),
+                    pw.SizedBox(
+                      width: double.infinity,
+                      child: pw.Text(
+                        variantName,
+                        style: variantStyle,
+                        textAlign: pw.TextAlign.center,
+                        textDirection: pw.TextDirection.rtl,
+                        maxLines: 2,
+                        overflow: pw.TextOverflow.clip,
+                      ),
+                    ),
+                  ],
+                  pw.SizedBox(height: 18),
+                  pw.BarcodeWidget(
+                    barcode: barcodeType,
+                    data: barcode,
+                    width: 75 * PdfPageFormat.mm,
+                    height: 28 * PdfPageFormat.mm,
+                    drawText: true,
+                    textStyle: barcodeTextStyle,
                   ),
                 ],
-                pw.SizedBox(height: isSmall ? 2 : 3),
-                pw.BarcodeWidget(
-                  barcode: barcodeType,
-                  data: barcode,
-                  width: isSmall ? 38 * PdfPageFormat.mm : 56 * PdfPageFormat.mm,
-                  height: isSmall ? 12 * PdfPageFormat.mm : 16 * PdfPageFormat.mm,
-                  drawText: true,
-                  textStyle: pw.TextStyle(
-                    font: _arabicRegular,
-                    fontSize: isSmall ? 5 : 6,
-                  ),
-                ),
-              ],
+              ),
             );
           },
         ),

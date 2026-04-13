@@ -44,9 +44,10 @@ class ProductsRepoImpl implements ProductsRepo {
         order: 'name asc',
       );
 
-      final products = records
-          .map((r) => ProductModel.fromOdoo(r as Map<String, dynamic>))
-          .toList();
+      final products =
+          records
+              .map((r) => ProductModel.fromOdoo(r as Map<String, dynamic>))
+              .toList();
 
       return Right(products);
     } on AuthException catch (e) {
@@ -66,7 +67,7 @@ class ProductsRepoImpl implements ProductsRepo {
       final records = await odooClient.searchRead(
         model: ApiConstants.productProductModel,
         domain: [
-          ['product_tmpl_id', '=', templateId]
+          ['product_tmpl_id', '=', templateId],
         ],
         fields: ApiConstants.productVariantFields,
       );

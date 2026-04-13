@@ -14,6 +14,8 @@ class ProductsCubit extends Cubit<ProductsState> {
 
     final result = await _productsRepo.getProducts();
 
+    if (isClosed) return;
+
     result.fold(
       (failure) => emit(ProductsError(failure.message)),
       (products) => emit(ProductsLoaded(
@@ -86,6 +88,8 @@ class ProductsCubit extends Cubit<ProductsState> {
     emit(const ProductsLoading());
 
     final result = await _productsRepo.getProducts(searchQuery: query);
+
+    if (isClosed) return;
 
     result.fold(
       (failure) => emit(ProductsError(failure.message)),

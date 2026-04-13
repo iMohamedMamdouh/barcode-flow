@@ -6,11 +6,13 @@ import '../../../../core/constants/product_categories.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/responsive_helper.dart';
 import '../../../../core/utils/service_locator.dart';
+import '../../../../main.dart';
 import '../../domain/entities/product_entity.dart';
 import '../../domain/repos/products_repo.dart';
 import '../cubits/products_cubit.dart';
 import '../cubits/products_state.dart';
 import '../widgets/category_filter_widget.dart';
+import '../widgets/print_action_dialog_widget.dart';
 import '../widgets/product_card_widget.dart';
 import '../widgets/products_search_bar_widget.dart';
 
@@ -26,8 +28,34 @@ class ProductsScreen extends StatelessWidget {
   }
 }
 
-class _ProductsScreenBody extends StatelessWidget {
+class _ProductsScreenBody extends StatefulWidget {
   const _ProductsScreenBody();
+
+  @override
+  State<_ProductsScreenBody> createState() => _ProductsScreenBodyState();
+}
+
+class _ProductsScreenBodyState extends State<_ProductsScreenBody>
+    with RouteAware {
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final route = ModalRoute.of(context);
+    if (route is ModalRoute<void>) {
+      routeObserver.subscribe(this, route);
+    }
+  }
+
+  @override
+  void dispose() {
+    routeObserver.unsubscribe(this);
+    super.dispose();
+  }
+
+  @override
+  void didPopNext() {
+    FocusManager.instance.primaryFocus?.unfocus();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -42,7 +70,10 @@ class _ProductsScreenBody extends StatelessWidget {
           ),
         ],
       ),
-      body: Column(
+      body: GestureDetector(
+        onTap: () => FocusManager.instance.primaryFocus?.unfocus(),
+        behavior: HitTestBehavior.translucent,
+        child: Column(
         children: [
           ProductsSearchBarWidget(
             onSearch: (query) {
@@ -83,6 +114,7 @@ class _ProductsScreenBody extends StatelessWidget {
             ),
           ),
         ],
+        ),
       ),
     );
   }
@@ -229,20 +261,18 @@ class _ProductsScreenBody extends StatelessWidget {
   }
 
   void _onProductTap(BuildContext context, ProductEntity product) {
+    FocusManager.instance.primaryFocus?.unfocus();
     if (product.hasVariants) {
       Navigator.of(
         context,
       ).pushNamed(AppRoutes.productVariants, arguments: product);
-    } else if (product.variantIds.isNotEmpty) {
-      Navigator.of(context).pushNamed(
-        AppRoutes.productDetails,
-        arguments: {
-          'productName': product.name,
-          'variantId': product.variantIds.first,
-          'barcode': product.barcode,
-          'defaultCode': product.defaultCode,
-          'imageBase64': product.imageBase64,
-        },
+    } else {
+      PrintActionDialogWidget.show(
+        context,
+        productName: product.name,
+        barcode: product.barcode,
+        defaultCode: product.defaultCode,
+        imageBase64: product.imageBase64,
       );
     }
   }

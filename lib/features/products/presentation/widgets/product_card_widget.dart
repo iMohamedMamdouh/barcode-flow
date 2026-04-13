@@ -26,9 +26,10 @@ class ProductCardWidget extends StatelessWidget {
     final padding = ResponsiveHelper.cardPadding(screenWidth);
 
     return Card(
-      margin: compactMargin
-          ? const EdgeInsets.all(2)
-          : const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      margin:
+          compactMargin
+              ? const EdgeInsets.all(2)
+              : const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(12),

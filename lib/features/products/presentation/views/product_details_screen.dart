@@ -210,7 +210,10 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
                 arguments: {
                   'productName': productName,
                   'barcode': barcode,
-                  'defaultCode': defaultCode,
+                  'imageBase64': imageBase64,
+                  'variantName': attributeValues.isNotEmpty
+                      ? attributeValues.join(' • ')
+                      : null,
                   'quantity': _quantity,
                 },
               );

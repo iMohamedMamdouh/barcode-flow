@@ -45,13 +45,19 @@ class _ProductsSearchBarWidgetState extends State<ProductsSearchBarWidget> {
         onChanged: _onChanged,
         decoration: InputDecoration(
           hintText: 'بحث بالاسم أو الباركود أو الرمز...',
-          prefixIcon: const Icon(Icons.search_rounded, color: AppColors.primary),
+          prefixIcon: const Icon(
+            Icons.search_rounded,
+            color: AppColors.primary,
+          ),
           suffixIcon: ValueListenableBuilder<TextEditingValue>(
             valueListenable: _controller,
             builder: (_, value, _) {
               if (value.text.isEmpty) return const SizedBox.shrink();
               return IconButton(
-                icon: const Icon(Icons.clear_rounded, color: AppColors.textSecondary),
+                icon: const Icon(
+                  Icons.clear_rounded,
+                  color: AppColors.textSecondary,
+                ),
                 onPressed: () {
                   _controller.clear();
                   widget.onSearch('');
@@ -61,7 +67,10 @@ class _ProductsSearchBarWidgetState extends State<ProductsSearchBarWidget> {
           ),
           filled: true,
           fillColor: AppColors.surface,
-          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 16,
+            vertical: 12,
+          ),
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
             borderSide: BorderSide.none,
