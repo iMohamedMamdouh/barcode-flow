@@ -5,6 +5,7 @@ import '../../features/products/domain/repos/products_repo.dart';
 import '../../features/printing/data/repos/printing_repo_impl.dart';
 import '../../features/printing/domain/repos/printing_repo.dart';
 import '../network/odoo_client.dart';
+import '../services/bluetooth_printer_service.dart';
 
 final sl = GetIt.instance;
 
@@ -15,4 +16,8 @@ void setupServiceLocator() {
     () => ProductsRepoImpl(odooClient: sl<OdooClient>()),
   );
   sl.registerLazySingleton<PrintingRepo>(() => PrintingRepoImpl());
+
+  sl.registerLazySingleton<BluetoothPrinterService>(
+    () => BluetoothPrinterService.instance,
+  );
 }

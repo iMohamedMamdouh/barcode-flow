@@ -5,11 +5,15 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:printing/printing.dart';
 
+import '../../../../core/services/bluetooth_printer_service.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/service_locator.dart';
 import '../../../printing/domain/repos/printing_repo.dart';
+import '../../../printing/presentation/cubits/bluetooth_printer_cubit.dart';
+import '../../../printing/presentation/cubits/bluetooth_printer_state.dart';
 import '../../../printing/presentation/cubits/printing_cubit.dart';
 import '../../../printing/presentation/cubits/printing_state.dart';
+import '../../../printing/presentation/widgets/printer_selector_widget.dart';
 import 'quantity_selector_widget.dart';
 
 class PrintActionDialogWidget extends StatefulWidget {
@@ -63,8 +67,16 @@ class _PrintActionDialogWidgetState extends State<PrintActionDialogWidget> {
 
   @override
   Widget build(BuildContext context) {
-    return BlocProvider(
-      create: (_) => PrintingCubit(sl<PrintingRepo>()),
+    return MultiBlocProvider(
+      providers: [
+        BlocProvider(create: (_) => PrintingCubit(sl<PrintingRepo>())),
+        BlocProvider(
+          create: (_) => BluetoothPrinterCubit(
+            sl<PrintingRepo>(),
+            sl<BluetoothPrinterService>(),
+          )..checkConnection(),
+        ),
+      ],
       child: Container(
         decoration: const BoxDecoration(
           color: AppColors.surface,
@@ -85,7 +97,9 @@ class _PrintActionDialogWidgetState extends State<PrintActionDialogWidget> {
                 _buildNoBarcode()
               else ...[
                 _buildQuantitySection(),
-                const SizedBox(height: 24),
+                const SizedBox(height: 16),
+                _buildConnectionStatus(),
+                const SizedBox(height: 16),
                 _buildActionButtons(),
               ],
               const SizedBox(height: 8),
@@ -242,33 +256,105 @@ class _PrintActionDialogWidgetState extends State<PrintActionDialogWidget> {
     );
   }
 
+  Widget _buildConnectionStatus() {
+    return BlocBuilder<BluetoothPrinterCubit, BluetoothPrinterState>(
+      builder: (context, state) {
+        final isConnected = state is BtPrinterConnected;
+        final deviceName = isConnected ? state.device.name : null;
+
+        return Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20),
+          child: GestureDetector(
+            onTap: () => PrinterSelectorWidget.show(context),
+            child: Container(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              decoration: BoxDecoration(
+                color: isConnected
+                    ? Colors.green.withValues(alpha: 0.08)
+                    : Colors.orange.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(
+                  color: isConnected
+                      ? Colors.green.withValues(alpha: 0.4)
+                      : Colors.orange.withValues(alpha: 0.4),
+                ),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    isConnected
+                        ? Icons.bluetooth_connected
+                        : Icons.bluetooth_disabled,
+                    size: 20,
+                    color: isConnected ? Colors.green : Colors.orange,
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      isConnected
+                          ? 'متصل: ${deviceName ?? "طابعة"}'
+                          : 'غير متصل — اضغط لاختيار الطابعة',
+                      style: GoogleFonts.tajawal(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: isConnected ? Colors.green : Colors.orange,
+                      ),
+                    ),
+                  ),
+                  Icon(
+                    isConnected
+                        ? Icons.check_circle
+                        : Icons.arrow_forward_ios,
+                    size: 16,
+                    color: isConnected ? Colors.green : Colors.orange,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   Widget _buildActionButtons() {
-    return BlocConsumer<PrintingCubit, PrintingState>(
+    return BlocConsumer<BluetoothPrinterCubit, BluetoothPrinterState>(
       listener: (context, state) {
-        if (state is PrintingError) {
+        if (state is BtPrinterPrintSuccess) {
+          Navigator.of(context).pop();
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(state.message),
+              content: Text(
+                'تم الطباعة بنجاح',
+                style: GoogleFonts.tajawal(),
+              ),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+        if (state is BtPrinterError) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                state.message,
+                style: GoogleFonts.tajawal(),
+              ),
               backgroundColor: AppColors.error,
             ),
           );
         }
-        if (state is PrintingReady) {
-          _showPrintShareOptions(context, state);
-        }
       },
       builder: (context, state) {
-        final isLoading = state is PrintingGenerating;
+        final isPrinting = state is BtPrinterPrinting;
         return Padding(
           padding: const EdgeInsets.symmetric(horizontal: 20),
           child: Row(
             children: [
               Expanded(
                 child: ElevatedButton.icon(
-                  onPressed: isLoading
-                      ? null
-                      : () => _generateAndPrint(context),
-                  icon: isLoading
+                  onPressed: isPrinting ? null : () => _directPrint(context),
+                  icon: isPrinting
                       ? const SizedBox(
                           width: 18,
                           height: 18,
@@ -278,13 +364,13 @@ class _PrintActionDialogWidgetState extends State<PrintActionDialogWidget> {
                           ),
                         )
                       : const Icon(Icons.print_rounded),
-                  label: Text(isLoading ? 'جارٍ...' : 'طباعة'),
+                  label: Text(isPrinting ? 'جارٍ الطباعة...' : 'طباعة فورية'),
                 ),
               ),
               const SizedBox(width: 12),
               Expanded(
                 child: OutlinedButton.icon(
-                  onPressed: isLoading
+                  onPressed: isPrinting
                       ? null
                       : () => _generateAndShare(context),
                   icon: const Icon(Icons.share_rounded),
@@ -298,29 +384,28 @@ class _PrintActionDialogWidgetState extends State<PrintActionDialogWidget> {
     );
   }
 
-  void _generateAndPrint(BuildContext context) async {
-    final cubit = context.read<PrintingCubit>();
-    await cubit.generateLabel(
+  void _directPrint(BuildContext context) async {
+    final btCubit = context.read<BluetoothPrinterCubit>();
+    final connected = await btCubit.isConnected;
+
+    if (!connected) {
+      if (!mounted) return;
+      final didConnect = await PrinterSelectorWidget.show(context);
+      if (!didConnect || !mounted) return;
+    }
+
+    await btCubit.printLabel(
       productName: widget.productName,
       barcode: widget.barcode!,
       variantName: widget.variantName,
       imageBase64: widget.imageBase64,
       quantity: _quantity,
     );
-
-    if (!mounted) return;
-    final state = cubit.state;
-    if (state is PrintingReady) {
-      Navigator.of(context).pop();
-      await Printing.layoutPdf(
-        onLayout: (_) async => state.pdfData,
-        name: 'barcode_${widget.barcode}',
-      );
-    }
   }
 
   void _generateAndShare(BuildContext context) async {
     final cubit = context.read<PrintingCubit>();
+    final nav = Navigator.of(context);
     await cubit.generateLabel(
       productName: widget.productName,
       barcode: widget.barcode!,
@@ -332,15 +417,11 @@ class _PrintActionDialogWidgetState extends State<PrintActionDialogWidget> {
     if (!mounted) return;
     final state = cubit.state;
     if (state is PrintingReady) {
-      Navigator.of(context).pop();
+      nav.pop();
       await Printing.sharePdf(
         bytes: state.pdfData,
         filename: 'barcode_${widget.barcode}.pdf',
       );
     }
-  }
-
-  void _showPrintShareOptions(BuildContext context, PrintingReady state) {
-    // Handled directly in _generateAndPrint / _generateAndShare
   }
 }
