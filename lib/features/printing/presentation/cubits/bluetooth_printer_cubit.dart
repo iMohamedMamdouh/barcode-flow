@@ -4,15 +4,12 @@ import 'package:print_bluetooth_thermal/print_bluetooth_thermal.dart';
 
 import '../../../../core/services/bluetooth_printer_service.dart';
 import '../../../../core/utils/tspl_label_builder.dart';
-import '../../domain/repos/printing_repo.dart';
 import 'bluetooth_printer_state.dart';
 
 class BluetoothPrinterCubit extends Cubit<BluetoothPrinterState> {
-  final PrintingRepo _printingRepo;
   final BluetoothPrinterService _printerService;
 
-  BluetoothPrinterCubit(this._printingRepo, this._printerService)
-      : super(BtPrinterInitial());
+  BluetoothPrinterCubit(this._printerService) : super(BtPrinterInitial());
 
   Future<bool> get isConnected => _printerService.isConnected;
   BluetoothInfo? get connectedDevice => _printerService.connectedDevice;
@@ -77,7 +74,7 @@ class BluetoothPrinterCubit extends Cubit<BluetoothPrinterState> {
     emit(BtPrinterDisconnected());
   }
 
-  /// Generate PDF → rasterize to image → build TSPL → send raw bytes
+  /// Print with native TSPL barcode commands for sharper scanning.
   Future<void> printLabel({
     required String productName,
     required String barcode,
@@ -94,23 +91,12 @@ class BluetoothPrinterCubit extends Cubit<BluetoothPrinterState> {
 
     emit(BtPrinterPrinting());
     try {
-      if (kDebugMode) debugPrint('[PRINT] Generating PDF...');
-
-      final pdfData = await _printingRepo.generatePdfLabel(
-        productName: productName,
-        barcode: barcode,
-        variantName: variantName,
-        imageBase64: imageBase64,
-        quantity: 1,
-      );
-
       if (kDebugMode) {
-        debugPrint('[PRINT] PDF generated: ${pdfData.length} bytes');
-        debugPrint('[PRINT] Converting to TSPL bitmap...');
+        debugPrint('[PRINT] Building native TSPL barcode...');
       }
 
-      final tsplBytes = await TsplLabelBuilder.buildFromPdf(
-        pdfData,
+      final tsplBytes = TsplLabelBuilder.buildBarcodeLabel(
+        barcode,
         quantity: quantity,
         density: density,
       );

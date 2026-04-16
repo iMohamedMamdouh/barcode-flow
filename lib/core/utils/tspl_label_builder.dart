@@ -6,8 +6,8 @@ import 'package:printing/printing.dart';
 
 class TsplLabelBuilder {
   static const int dpi = 203;
-  static const double labelWidthMm = 101.6; // 4 inch
-  static const double labelHeightMm = 152.4; // 6 inch
+  static const double labelWidthMm = 40; // 40 mm
+  static const double labelHeightMm = 30; // 30 mm
 
   static int get labelWidthDots => (labelWidthMm / 25.4 * dpi).round();
   static int get labelHeightDots => (labelHeightMm / 25.4 * dpi).round();
@@ -45,6 +45,52 @@ class TsplLabelBuilder {
       gapMm: gapMm,
       density: density,
     );
+  }
+
+  /// Builds a native TSPL barcode command to avoid raster distortion
+  /// that can make scanners fail on small labels.
+  static List<int> buildBarcodeLabel(
+    String barcode, {
+    int quantity = 1,
+    double gapMm = 3.0,
+    int density = 8,
+  }) {
+    final result = <int>[];
+    final densityValue = density.clamp(1, 15);
+    final barcodeType = _detectTsplBarcodeType(barcode);
+    final barcodeHeight = 100;
+    final narrow = barcodeType == '128' ? 2 : 3;
+    final wide = barcodeType == '128' ? 2 : 3;
+    final barcodeWidth = _estimateBarcodeWidthDots(
+      barcode,
+      barcodeType: barcodeType,
+      narrow: narrow,
+      wide: wide,
+    );
+    final textHeight = 28;
+    final x = ((labelWidthDots - barcodeWidth) ~/ 2).clamp(0, labelWidthDots);
+    final y = ((labelHeightDots - (barcodeHeight + textHeight)) ~/ 2).clamp(
+      0,
+      labelHeightDots,
+    );
+
+    _addCommand(
+      result,
+      'SIZE ${labelWidthMm.toStringAsFixed(1)} mm,${labelHeightMm.toStringAsFixed(1)} mm',
+    );
+    _addCommand(result, 'GAP ${gapMm.toStringAsFixed(1)} mm,0');
+    _addCommand(result, 'SPEED 4');
+    _addCommand(result, 'DENSITY $densityValue');
+    _addCommand(result, 'DIRECTION 0');
+    _addCommand(result, 'REFERENCE 0,0');
+    _addCommand(result, 'CLS');
+    _addCommand(
+      result,
+      'BARCODE $x,$y,"$barcodeType",$barcodeHeight,1,0,$narrow,$wide,"$barcode"',
+    );
+    _addCommand(result, 'PRINT $quantity,1');
+
+    return result;
   }
 
   /// Creates a thermal-like monochrome preview image from the same
@@ -145,6 +191,52 @@ class TsplLabelBuilder {
 
   static void _addRaw(List<int> buffer, String text) {
     buffer.addAll(utf8.encode(text));
+  }
+
+  static String _detectTsplBarcodeType(String data) {
+    if (RegExp(r'^\d{13}$').hasMatch(data) && _isValidEan13(data)) {
+      return 'EAN13';
+    }
+    if (RegExp(r'^\d{8}$').hasMatch(data) && _isValidEan8(data)) {
+      return 'EAN8';
+    }
+    return '128';
+  }
+
+  static int _estimateBarcodeWidthDots(
+    String barcode, {
+    required String barcodeType,
+    required int narrow,
+    required int wide,
+  }) {
+    switch (barcodeType) {
+      case 'EAN13':
+        return 95 * narrow + 24;
+      case 'EAN8':
+        return 67 * narrow + 24;
+      default:
+        return ((barcode.length * 11) + 35) * (narrow + wide) ~/ 2;
+    }
+  }
+
+  static bool _isValidEan13(String data) {
+    final digits = data.codeUnits.map((c) => c - 48).toList();
+    int sum = 0;
+    for (int i = 0; i < 12; i++) {
+      sum += digits[i] * (i.isEven ? 1 : 3);
+    }
+    final checksum = (10 - (sum % 10)) % 10;
+    return digits[12] == checksum;
+  }
+
+  static bool _isValidEan8(String data) {
+    final digits = data.codeUnits.map((c) => c - 48).toList();
+    int sum = 0;
+    for (int i = 0; i < 7; i++) {
+      sum += digits[i] * (i.isEven ? 3 : 1);
+    }
+    final checksum = (10 - (sum % 10)) % 10;
+    return digits[7] == checksum;
   }
 
   /// Convert image to 1-bit monochrome bitmap.

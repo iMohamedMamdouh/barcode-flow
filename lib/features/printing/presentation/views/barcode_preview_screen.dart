@@ -28,10 +28,9 @@ class BarcodePreviewScreen extends StatelessWidget {
       providers: [
         BlocProvider(create: (_) => PrintingCubit(sl<PrintingRepo>())),
         BlocProvider(
-          create: (_) => BluetoothPrinterCubit(
-            sl<PrintingRepo>(),
-            sl<BluetoothPrinterService>(),
-          )..checkConnection(),
+          create: (_) =>
+              BluetoothPrinterCubit(sl<BluetoothPrinterService>())
+                ..checkConnection(),
         ),
       ],
       child: _BarcodePreviewBody(data: data),
@@ -152,7 +151,7 @@ class _BarcodePreviewBodyState extends State<_BarcodePreviewBody> {
                     children: [
                       _buildPreviewSection(state),
                       const SizedBox(height: 24),
-                      _buildInfoRow('حجم الورقة', '4 × 6 بوصة'),
+                      _buildInfoRow('حجم الورقة', '40 × 30 مم'),
                       const SizedBox(height: 12),
                       _buildInfoRow('عدد النسخ', '$quantity'),
                       const SizedBox(height: 16),

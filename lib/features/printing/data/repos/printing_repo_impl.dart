@@ -55,19 +55,6 @@ class PrintingRepoImpl implements PrintingRepo {
 
     final barcodeType = BarcodeHelper.detectType(barcode);
 
-    final productNameStyle = pw.TextStyle(
-      font: _arabicBold,
-      fontFallback: _fallbackFonts,
-      fontSize: 15,
-    );
-
-    final variantStyle = pw.TextStyle(
-      font: _arabicRegular,
-      fontFallback: _fallbackFonts,
-      fontSize: 12,
-      color: PdfColor.fromHex('#444444'),
-    );
-
     final barcodeTextStyle = pw.TextStyle(
       font: _arabicRegular,
       fontFallback: _fallbackFonts,
@@ -87,43 +74,43 @@ class PrintingRepoImpl implements PrintingRepo {
                 crossAxisAlignment: pw.CrossAxisAlignment.center,
                 mainAxisSize: pw.MainAxisSize.min,
                 children: [
-                  pw.Image(
-                    _logoImage!,
-                    width: 45 * PdfPageFormat.mm,
-                    fit: pw.BoxFit.contain,
-                  ),
-                  pw.SizedBox(height: 14),
-                  pw.SizedBox(
-                    width: double.infinity,
-                    child: pw.Text(
-                      productName,
-                      style: productNameStyle,
-                      textAlign: pw.TextAlign.center,
-                      textDirection: pw.TextDirection.rtl,
-                      maxLines: 3,
-                      overflow: pw.TextOverflow.clip,
-                    ),
-                  ),
-                  if (variantName != null && variantName.isNotEmpty) ...[
-                    pw.SizedBox(height: 6),
-                    pw.SizedBox(
-                      width: double.infinity,
-                      child: pw.Text(
-                        variantName,
-                        style: variantStyle,
-                        textAlign: pw.TextAlign.center,
-                        textDirection: pw.TextDirection.rtl,
-                        maxLines: 2,
-                        overflow: pw.TextOverflow.clip,
-                      ),
-                    ),
-                  ],
-                  pw.SizedBox(height: 18),
+                  // Temporarily hide all non-barcode content in the PDF label.
+                  // pw.Image(
+                  //   _logoImage!,
+                  //   width: 45 * PdfPageFormat.mm,
+                  //   fit: pw.BoxFit.contain,
+                  // ),
+                  // pw.SizedBox(height: 14),
+                  // pw.SizedBox(
+                  //   width: double.infinity,
+                  //   child: pw.Text(
+                  //     productName,
+                  //     style: productNameStyle,
+                  //     textAlign: pw.TextAlign.center,
+                  //     textDirection: pw.TextDirection.rtl,
+                  //     maxLines: 3,
+                  //     overflow: pw.TextOverflow.clip,
+                  //   ),
+                  // ),
+                  // if (variantName != null && variantName.isNotEmpty) ...[
+                  //   pw.SizedBox(height: 6),
+                  //   pw.SizedBox(
+                  //     width: double.infinity,
+                  //     child: pw.Text(
+                  //       variantName,
+                  //       style: variantStyle,
+                  //       textAlign: pw.TextAlign.center,
+                  //       textDirection: pw.TextDirection.rtl,
+                  //       maxLines: 2,
+                  //       overflow: pw.TextOverflow.clip,
+                  //     ),
+                  //   ),
+                  // ],
                   pw.BarcodeWidget(
                     barcode: barcodeType,
                     data: barcode,
-                    width: 75 * PdfPageFormat.mm,
-                    height: 28 * PdfPageFormat.mm,
+                    width: 34 * PdfPageFormat.mm,
+                    height: 16 * PdfPageFormat.mm,
                     drawText: true,
                     textStyle: barcodeTextStyle,
                   ),

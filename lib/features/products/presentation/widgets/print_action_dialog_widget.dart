@@ -72,10 +72,9 @@ class _PrintActionDialogWidgetState extends State<PrintActionDialogWidget> {
       providers: [
         BlocProvider(create: (_) => PrintingCubit(sl<PrintingRepo>())),
         BlocProvider(
-          create: (_) => BluetoothPrinterCubit(
-            sl<PrintingRepo>(),
-            sl<BluetoothPrinterService>(),
-          )..checkConnection(),
+          create: (_) =>
+              BluetoothPrinterCubit(sl<BluetoothPrinterService>())
+                ..checkConnection(),
         ),
       ],
       child: Container(
