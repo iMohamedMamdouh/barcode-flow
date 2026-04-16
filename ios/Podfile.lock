@@ -1,7 +1,7 @@
 PODS:
-  - bluetooth_print (0.0.1):
-    - Flutter
   - Flutter (1.0.0)
+  - print_bluetooth_thermal (0.0.1):
+    - Flutter
   - printing (1.0.0):
     - Flutter
   - shared_preferences_foundation (0.0.1):
@@ -9,24 +9,24 @@ PODS:
     - FlutterMacOS
 
 DEPENDENCIES:
-  - bluetooth_print (from `.symlinks/plugins/bluetooth_print/ios`)
   - Flutter (from `Flutter`)
+  - print_bluetooth_thermal (from `.symlinks/plugins/print_bluetooth_thermal/ios`)
   - printing (from `.symlinks/plugins/printing/ios`)
   - shared_preferences_foundation (from `.symlinks/plugins/shared_preferences_foundation/darwin`)
 
 EXTERNAL SOURCES:
-  bluetooth_print:
-    :path: ".symlinks/plugins/bluetooth_print/ios"
   Flutter:
     :path: Flutter
+  print_bluetooth_thermal:
+    :path: ".symlinks/plugins/print_bluetooth_thermal/ios"
   printing:
     :path: ".symlinks/plugins/printing/ios"
   shared_preferences_foundation:
     :path: ".symlinks/plugins/shared_preferences_foundation/darwin"
 
 SPEC CHECKSUMS:
-  bluetooth_print: dc9b8454b5ceef09b4bf0f07a97257cd626cab0d
   Flutter: cabc95a1d2626b1b06e7179b784ebcf0c0cde467
+  print_bluetooth_thermal: 28adf527ac4c47e42e268c13d21e5f2abf48ecdd
   printing: 54ff03f28fe9ba3aa93358afb80a8595a071dd07
   shared_preferences_foundation: 7036424c3d8ec98dfe75ff1667cb0cd531ec82bb
 

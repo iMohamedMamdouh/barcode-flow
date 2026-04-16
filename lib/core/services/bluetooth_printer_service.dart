@@ -44,12 +44,12 @@ class BluetoothPrinterService {
     return PrintBluetoothThermal.disconnect;
   }
 
-  /// Send bytes in small chunks with delay to prevent data loss.
+  /// Send bytes in chunks to avoid Bluetooth buffer overflow.
   Future<bool> writeBytes(List<int> bytes) async {
     final connected = await isConnected;
     if (!connected) return false;
     try {
-      const chunkSize = 200;
+      const chunkSize = 500;
       for (int i = 0; i < bytes.length; i += chunkSize) {
         final end =
             (i + chunkSize > bytes.length) ? bytes.length : i + chunkSize;
@@ -57,7 +57,7 @@ class BluetoothPrinterService {
         final result = await PrintBluetoothThermal.writeBytes(chunk);
         if (!result) return false;
         if (i + chunkSize < bytes.length) {
-          await Future.delayed(const Duration(milliseconds: 30));
+          await Future.delayed(const Duration(milliseconds: 10));
         }
       }
       return true;

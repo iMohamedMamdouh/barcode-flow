@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -7,12 +9,12 @@ import '../../../../core/services/bluetooth_printer_service.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/responsive_helper.dart';
 import '../../../../core/utils/service_locator.dart';
+import '../../../../core/utils/tspl_label_builder.dart';
 import '../../domain/repos/printing_repo.dart' show PrintingRepo;
 import '../cubits/bluetooth_printer_cubit.dart';
 import '../cubits/bluetooth_printer_state.dart';
 import '../cubits/printing_cubit.dart';
 import '../cubits/printing_state.dart';
-import '../widgets/barcode_label_widget.dart';
 import '../widgets/printer_selector_widget.dart';
 
 class BarcodePreviewScreen extends StatelessWidget {
@@ -37,16 +39,62 @@ class BarcodePreviewScreen extends StatelessWidget {
   }
 }
 
-class _BarcodePreviewBody extends StatelessWidget {
+class _BarcodePreviewBody extends StatefulWidget {
   final Map<String, dynamic> data;
 
   const _BarcodePreviewBody({required this.data});
 
+  @override
+  State<_BarcodePreviewBody> createState() => _BarcodePreviewBodyState();
+}
+
+class _BarcodePreviewBodyState extends State<_BarcodePreviewBody> {
+  int _density = 8;
+  int _threshold = 128;
+  Uint8List? _previewBytes;
+  bool _isPreviewLoading = false;
+
+  Map<String, dynamic> get data => widget.data;
   String get productName => data['productName'] as String? ?? '';
   String get barcode => data['barcode'] as String? ?? '';
   String? get variantName => data['variantName'] as String?;
   String? get imageBase64 => data['imageBase64'] as String?;
   int get quantity => data['quantity'] as int? ?? 1;
+
+  @override
+  void initState() {
+    super.initState();
+    _generateLabelPdf();
+  }
+
+  Future<void> _generateLabelPdf() async {
+    await context.read<PrintingCubit>().generateLabel(
+          productName: productName,
+          barcode: barcode,
+          variantName: variantName,
+          imageBase64: imageBase64,
+          quantity: 1,
+        );
+  }
+
+  Future<void> _generateThermalPreview(Uint8List pdfData) async {
+    if (_isPreviewLoading) return;
+    setState(() => _isPreviewLoading = true);
+    try {
+      final bytes = await TsplLabelBuilder.buildThermalPreviewFromPdf(
+        pdfData,
+        threshold: _threshold,
+      );
+      if (!mounted) return;
+      setState(() => _previewBytes = bytes);
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _previewBytes = null);
+    } finally {
+      if (!mounted) return;
+      setState(() => _isPreviewLoading = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -87,6 +135,9 @@ class _BarcodePreviewBody extends StatelessWidget {
                 ),
               );
             }
+            if (state is PrintingReady) {
+              _generateThermalPreview(state.pdfData);
+            }
           },
           builder: (context, state) {
             return Center(
@@ -99,17 +150,21 @@ class _BarcodePreviewBody extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      _buildPreviewSection(),
+                      _buildPreviewSection(state),
                       const SizedBox(height: 24),
                       _buildInfoRow('حجم الورقة', '4 × 6 بوصة'),
                       const SizedBox(height: 12),
                       _buildInfoRow('عدد النسخ', '$quantity'),
                       const SizedBox(height: 16),
+                      _buildDensityControl(),
+                      const SizedBox(height: 12),
+                      _buildThresholdControl(state),
+                      const SizedBox(height: 16),
                       _buildConnectionStatus(context),
                       const SizedBox(height: 24),
-                      _buildDirectPrintButton(context),
+                      _buildDirectPrintButton(context, state),
                       const SizedBox(height: 12),
-                      _buildGenerateButton(context, state),
+                      _buildGenerateButton(state),
                       const SizedBox(height: 12),
                       if (state is PrintingReady)
                         _buildShareButton(context, state),
@@ -124,11 +179,11 @@ class _BarcodePreviewBody extends StatelessWidget {
     );
   }
 
-  Widget _buildPreviewSection() {
+  Widget _buildPreviewSection(PrintingState state) {
     return Column(
       children: [
         Text(
-          'معاينة الملصق',
+          'المعاينة الفعلية للطابعة الحرارية',
           style: GoogleFonts.tajawal(
             fontSize: 18,
             fontWeight: FontWeight.w700,
@@ -136,12 +191,38 @@ class _BarcodePreviewBody extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 16),
-        BarcodeLabelWidget(
-          productName: productName,
-          barcode: barcode,
-          variantName: variantName,
+        AspectRatio(
+          aspectRatio: 4 / 6,
+          child: Container(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: AppColors.divider),
+            ),
+            clipBehavior: Clip.antiAlias,
+            child: _buildPreviewBody(state),
+          ),
         ),
       ],
+    );
+  }
+
+  Widget _buildPreviewBody(PrintingState state) {
+    if (state is PrintingGenerating || _isPreviewLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    if (_previewBytes == null) {
+      return Center(
+        child: Text(
+          'جاري تجهيز المعاينة...',
+          style: GoogleFonts.tajawal(color: AppColors.textSecondary),
+        ),
+      );
+    }
+    return Image.memory(
+      _previewBytes!,
+      fit: BoxFit.contain,
+      filterQuality: FilterQuality.none,
     );
   }
 
@@ -231,12 +312,99 @@ class _BarcodePreviewBody extends StatelessWidget {
     );
   }
 
-  Widget _buildDirectPrintButton(BuildContext context) {
+  Widget _buildDensityControl() {
+    return _buildSliderCard(
+      title: 'كثافة الطباعة (Density)',
+      valueLabel: '$_density / 15',
+      value: _density.toDouble(),
+      min: 1,
+      max: 15,
+      divisions: 14,
+      onChanged: (value) => setState(() => _density = value.round()),
+    );
+  }
+
+  Widget _buildThresholdControl(PrintingState state) {
+    return _buildSliderCard(
+      title: 'حساسية اللون (Threshold)',
+      valueLabel: '$_threshold / 255',
+      value: _threshold.toDouble(),
+      min: 40,
+      max: 220,
+      divisions: 180,
+      onChanged: (value) {
+        setState(() => _threshold = value.round());
+      },
+      onChangeEnd: (_) {
+        if (state is PrintingReady) {
+          _generateThermalPreview(state.pdfData);
+        }
+      },
+    );
+  }
+
+  Widget _buildSliderCard({
+    required String title,
+    required String valueLabel,
+    required double value,
+    required double min,
+    required double max,
+    required int divisions,
+    required ValueChanged<double> onChanged,
+    ValueChanged<double>? onChangeEnd,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: AppColors.surfaceVariant,
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  title,
+                  style: GoogleFonts.tajawal(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+              ),
+              Text(
+                valueLabel,
+                style: GoogleFonts.tajawal(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.primary,
+                ),
+              ),
+            ],
+          ),
+          Slider(
+            value: value,
+            min: min,
+            max: max,
+            divisions: divisions,
+            onChanged: onChanged,
+            onChangeEnd: onChangeEnd,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDirectPrintButton(BuildContext context, PrintingState state) {
+    final canPrint =
+        state is PrintingReady && _previewBytes != null && barcode.isNotEmpty;
     return BlocBuilder<BluetoothPrinterCubit, BluetoothPrinterState>(
-      builder: (context, state) {
-        final isPrinting = state is BtPrinterPrinting;
+      builder: (context, btState) {
+        final isPrinting = btState is BtPrinterPrinting;
         return ElevatedButton.icon(
-          onPressed: isPrinting ? null : () => _directPrint(context),
+          onPressed:
+              (isPrinting || !canPrint) ? null : () => _directPrint(context),
           icon: isPrinting
               ? const SizedBox(
                   width: 20,
@@ -247,7 +415,13 @@ class _BarcodePreviewBody extends StatelessWidget {
                   ),
                 )
               : const Icon(Icons.print_rounded),
-          label: Text(isPrinting ? 'جارٍ الطباعة...' : 'طباعة فورية'),
+          label: Text(
+            isPrinting
+                ? 'جارٍ الطباعة...'
+                : canPrint
+                    ? 'طباعة فورية'
+                    : 'جاري تجهيز المعاينة...',
+          ),
         );
       },
     );
@@ -269,23 +443,16 @@ class _BarcodePreviewBody extends StatelessWidget {
       variantName: variantName,
       imageBase64: imageBase64,
       quantity: quantity,
+      density: _density,
     );
   }
 
-  Widget _buildGenerateButton(BuildContext context, PrintingState state) {
+  Widget _buildGenerateButton(PrintingState state) {
     final isLoading = state is PrintingGenerating;
     return OutlinedButton.icon(
       onPressed: isLoading
           ? null
-          : () {
-              context.read<PrintingCubit>().generateLabel(
-                    productName: productName,
-                    barcode: barcode,
-                    variantName: variantName,
-                    imageBase64: imageBase64,
-                    quantity: quantity,
-                  );
-            },
+          : _generateLabelPdf,
       icon: isLoading
           ? const SizedBox(
               width: 20,

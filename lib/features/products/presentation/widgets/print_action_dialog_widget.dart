@@ -5,6 +5,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:printing/printing.dart';
 
+import '../../../../config/routes/app_routes.dart';
 import '../../../../core/services/bluetooth_printer_service.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/service_locator.dart';
@@ -353,7 +354,7 @@ class _PrintActionDialogWidgetState extends State<PrintActionDialogWidget> {
             children: [
               Expanded(
                 child: ElevatedButton.icon(
-                  onPressed: isPrinting ? null : () => _directPrint(context),
+                  onPressed: isPrinting ? null : () => _openPreview(context),
                   icon: isPrinting
                       ? const SizedBox(
                           width: 18,
@@ -364,7 +365,9 @@ class _PrintActionDialogWidgetState extends State<PrintActionDialogWidget> {
                           ),
                         )
                       : const Icon(Icons.print_rounded),
-                  label: Text(isPrinting ? 'جارٍ الطباعة...' : 'طباعة فورية'),
+                  label: Text(
+                    isPrinting ? 'جارٍ الطباعة...' : 'معاينة قبل الطباعة',
+                  ),
                 ),
               ),
               const SizedBox(width: 12),
@@ -384,22 +387,16 @@ class _PrintActionDialogWidgetState extends State<PrintActionDialogWidget> {
     );
   }
 
-  void _directPrint(BuildContext context) async {
-    final btCubit = context.read<BluetoothPrinterCubit>();
-    final connected = await btCubit.isConnected;
-
-    if (!connected) {
-      if (!mounted) return;
-      final didConnect = await PrinterSelectorWidget.show(context);
-      if (!didConnect || !mounted) return;
-    }
-
-    await btCubit.printLabel(
-      productName: widget.productName,
-      barcode: widget.barcode!,
-      variantName: widget.variantName,
-      imageBase64: widget.imageBase64,
-      quantity: _quantity,
+  void _openPreview(BuildContext context) async {
+    await Navigator.of(context).pushNamed(
+      AppRoutes.barcodePreview,
+      arguments: {
+        'productName': widget.productName,
+        'barcode': widget.barcode,
+        'imageBase64': widget.imageBase64,
+        'variantName': widget.variantName,
+        'quantity': _quantity,
+      },
     );
   }
 

@@ -84,6 +84,7 @@ class BluetoothPrinterCubit extends Cubit<BluetoothPrinterState> {
     String? variantName,
     String? imageBase64,
     required int quantity,
+    int density = 8,
   }) async {
     final connected = await _printerService.isConnected;
     if (!connected) {
@@ -111,6 +112,7 @@ class BluetoothPrinterCubit extends Cubit<BluetoothPrinterState> {
       final tsplBytes = await TsplLabelBuilder.buildFromPdf(
         pdfData,
         quantity: quantity,
+        density: density,
       );
 
       if (kDebugMode) {
