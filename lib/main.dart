@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'config/routes/app_routes.dart';
 import 'core/constants/app_constants.dart';
@@ -9,9 +10,10 @@ import 'core/utils/service_locator.dart';
 final RouteObserver<ModalRoute<void>> routeObserver =
     RouteObserver<ModalRoute<void>>();
 
-void main() {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  setupServiceLocator();
+  final prefs = await SharedPreferences.getInstance();
+  setupServiceLocator(prefs: prefs);
   runApp(const WasilaahApp());
 }
 

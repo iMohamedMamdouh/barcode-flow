@@ -6,6 +6,7 @@ import '../../../../core/constants/product_categories.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/responsive_helper.dart';
 import '../../../../core/utils/service_locator.dart';
+import '../../../auth/domain/repos/auth_repo.dart';
 import '../../../../main.dart';
 import '../../domain/entities/product_entity.dart';
 import '../../domain/repos/products_repo.dart';
@@ -67,6 +68,11 @@ class _ProductsScreenBodyState extends State<_ProductsScreenBody>
             icon: const Icon(Icons.refresh_rounded),
             onPressed: () => context.read<ProductsCubit>().loadProducts(),
             tooltip: 'تحديث',
+          ),
+          IconButton(
+            icon: const Icon(Icons.logout_rounded),
+            onPressed: () => _handleLogout(context),
+            tooltip: 'تسجيل الخروج',
           ),
         ],
       ),
@@ -275,5 +281,41 @@ class _ProductsScreenBodyState extends State<_ProductsScreenBody>
         imageBase64: product.imageBase64,
       );
     }
+  }
+
+  Future<void> _handleLogout(BuildContext context) async {
+    final shouldLogout = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text('تسجيل الخروج'),
+          content: const Text('هل تريد تسجيل الخروج من التطبيق؟'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(false),
+              child: const Text('إلغاء'),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.of(dialogContext).pop(true),
+              child: const Text('تسجيل الخروج'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (shouldLogout != true || !context.mounted) {
+      return;
+    }
+
+    await sl<AuthRepo>().logout();
+
+    if (!context.mounted) {
+      return;
+    }
+
+    Navigator.of(
+      context,
+    ).pushNamedAndRemoveUntil(AppRoutes.login, (route) => false);
   }
 }

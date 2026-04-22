@@ -3,9 +3,9 @@ import 'package:google_fonts/google_fonts.dart';
 
 import '../../../../config/routes/app_routes.dart';
 import '../../../../core/constants/app_constants.dart';
-import '../../../../core/network/odoo_client.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/service_locator.dart';
+import '../../../auth/domain/repos/auth_repo.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -45,23 +45,24 @@ class _SplashScreenState extends State<SplashScreen>
 
     if (!mounted) return;
 
-    try {
-      final odooClient = sl<OdooClient>();
-      await odooClient.authenticate(
-        url: AppConstants.odooUrl,
-        db: AppConstants.odooDatabase,
-        login: AppConstants.odooUsername,
-        password: AppConstants.odooPassword,
-      );
+    final authRepo = sl<AuthRepo>();
+    final localSession = authRepo.getLocalSession();
 
-      if (mounted) {
-        Navigator.of(context).pushReplacementNamed(AppRoutes.products);
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() => _errorMessage = e.toString());
-      }
+    if (!localSession.isLoggedIn) {
+      Navigator.of(context).pushReplacementNamed(AppRoutes.login);
+      return;
     }
+
+    final result = await authRepo.restoreSession();
+    result.fold((failure) {
+      setState(() => _errorMessage = failure.message);
+    }, (_) {
+      Navigator.of(context).pushReplacementNamed(AppRoutes.products);
+    });
+  }
+
+  void _goToLogin() {
+    Navigator.of(context).pushReplacementNamed(AppRoutes.login);
   }
 
   @override
@@ -140,7 +141,7 @@ class _SplashScreenState extends State<SplashScreen>
                         ),
                         const SizedBox(height: 12),
                         Text(
-                          'جارٍ الاتصال بالخادم...',
+                          'جارٍ التحقق من الجلسة...',
                           style: GoogleFonts.tajawal(
                             fontSize: 14,
                             color: Colors.white70,
@@ -178,7 +179,7 @@ class _SplashScreenState extends State<SplashScreen>
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'فشل الاتصال بالخادم',
+                  'فشل تسجيل الدخول التلقائي',
                   style: GoogleFonts.tajawal(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
@@ -203,16 +204,13 @@ class _SplashScreenState extends State<SplashScreen>
           SizedBox(
             width: double.infinity,
             child: ElevatedButton.icon(
-              onPressed: () {
-                setState(() => _errorMessage = null);
-                _connectAndNavigate();
-              },
+              onPressed: _goToLogin,
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.white,
                 foregroundColor: AppColors.primary,
               ),
-              icon: const Icon(Icons.refresh_rounded),
-              label: const Text('إعادة المحاولة'),
+              icon: const Icon(Icons.login_rounded),
+              label: const Text('الانتقال لتسجيل الدخول'),
             ),
           ),
         ],

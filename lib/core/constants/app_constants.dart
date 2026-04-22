@@ -11,6 +11,4 @@ class AppConstants {
   // غيّر هذه القيم حسب إعدادات خادم Odoo الخاص بك
   static const String odooUrl = 'https://erp.wasilaahteam.com';
   static const String odooDatabase = 'erp';
-  static const String odooUsername = 'imohamedmamdoh1@gmail.com';
-  static const String odooPassword = '111';
 }

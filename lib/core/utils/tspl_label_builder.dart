@@ -13,7 +13,6 @@ class TsplLabelBuilder {
   static const String _madeInEgyptAssetPath =
       'assets/images/made_in_egypt.jpeg';
 
-  // نسبة أبعاد اللوجو الأصلية 874/306
   static const double _logoAspectRatio = 874.0 / 306.0;
 
   static int get labelWidthDots =>
@@ -98,7 +97,7 @@ class TsplLabelBuilder {
     int threshold = 128,
 
     // 👇 تتحكم في عرض الباركود من هنا
-    int fixedBarcodeWidth = 240,
+    int fixedBarcodeWidth = 400,
   }) async {
     await _loadResources();
 
@@ -109,8 +108,16 @@ class TsplLabelBuilder {
 
     final barcodeHeight = (labelHeightDots * 0.24).round().clamp(130, 300);
 
-    // ✅ تثبيت عرض الباركود يدويًا
-    final barcodeTargetWidth = fixedBarcodeWidth.clamp(120, labelWidthDots);
+    // Keep side margins so barcode can always be visually centered.
+    const barcodeSidePaddingDots = 14;
+    final maxBarcodeDrawableWidth = (labelWidthDots -
+            (barcodeSidePaddingDots * 2))
+        .clamp(120, labelWidthDots);
+    // ✅ تثبيت عرض الباركود يدويًا ضمن المساحة المتاحة الفعلية
+    final barcodeTargetWidth = fixedBarcodeWidth.clamp(
+      120,
+      maxBarcodeDrawableWidth,
+    );
 
     final scaled = _scaleBarcodeToTargetWidth(
       barcode,
@@ -122,8 +129,11 @@ class TsplLabelBuilder {
     final wide = scaled.wide;
     final barcodeWidth = scaled.widthDots;
 
-    // ✅ توسيط الباركود 100%
-    final barcodeX = ((labelWidthDots - barcodeWidth) ~/ 2);
+    // ✅ توسيط الباركود أفقيًا ومنع x السالب
+    final barcodeX = ((labelWidthDots - barcodeWidth) ~/ 2).clamp(
+      barcodeSidePaddingDots,
+      labelWidthDots,
+    );
 
     final textAreaWidthBytes = (labelWidthDots ~/ 8).clamp(
       1,
@@ -170,6 +180,7 @@ class TsplLabelBuilder {
     const logoToProductNameGapDots = 28;
     const productNameBlockHeightDots = 82;
     const productNameToVariantGapDots = 8;
+    const variantToBarcodeGapDots = 16;
 
     final topTextY = logoY + logoHeightDots + logoToProductNameGapDots;
 
@@ -190,14 +201,39 @@ class TsplLabelBuilder {
 
     final productNameX = _centerBitmapX(bottomTextWidthDots);
 
+    // ============================================================
+    // ✅ الباركود يُثبَّت في منتصف الورقة رأسيًا — مستقل عن حجم نص المتغير
+    // ============================================================
+    const barcodeHumanTextHeightDots = 44;
+    const barcodeHumanTextGapDots = 10;
+    const madeInEgyptGapAfterBarcodeDots = 28;
+    const madeInEgyptBottomMarginDots = 8;
+
+    final barcodeBlockHeight =
+        barcodeHeight + barcodeHumanTextGapDots + barcodeHumanTextHeightDots;
+
+    final barcodeY = ((labelHeightDots - barcodeBlockHeight) ~/ 2).clamp(
+      0,
+      labelHeightDots - barcodeBlockHeight,
+    );
+
+    final barcodeDigitsY = barcodeY + barcodeHeight + barcodeHumanTextGapDots;
+
+    // ============================================================
+    // نص المتغير يملأ المسافة بين اسم المنتج وبداية الباركود تلقائيًا
+    // ============================================================
+    final productNameEndY =
+        topTextY + productNameBlockHeightDots + productNameToVariantGapDots;
+
     final bottomTextX = _centerBitmapX(bottomTextWidthDots);
+    final bottomTextY = productNameEndY;
 
-    final bottomTextY = (topTextY +
-            productNameBlockHeightDots +
-            productNameToVariantGapDots)
-        .clamp(0, labelHeightDots - 280);
-
-    const bottomTextHeight = 188;
+    final availableForVariant = (barcodeY -
+            variantToBarcodeGapDots -
+            bottomTextY)
+        .clamp(0, labelHeightDots);
+    final bottomTextHeight =
+        hasBottomText ? availableForVariant.clamp(60, 220) : 0;
 
     final bottomTextBitmap =
         hasBottomText
@@ -219,6 +255,9 @@ class TsplLabelBuilder {
             )
             : null;
 
+    // ============================================================
+    // "Made in Egypt" تحت الباركود مباشرة
+    // ============================================================
     final madeInEgyptWidthDots = (textAreaWidthAlignedDots * 0.54)
         .round()
         .clamp(100, textAreaWidthAlignedDots);
@@ -238,24 +277,6 @@ class TsplLabelBuilder {
       threshold: threshold,
     );
 
-    const barcodeHumanTextHeightDots = 44;
-    const barcodeHumanTextGapDots = 10;
-    const madeInEgyptGapAfterBarcodeDots = 28;
-    const madeInEgyptBottomMarginDots = 8;
-
-    final barcodeTopY =
-        hasBottomText ? (bottomTextY + bottomTextHeight + 16) : (topTextY + 92);
-    final maxBarcodeY = (labelHeightDots -
-            barcodeHeight -
-            barcodeHumanTextHeightDots -
-            barcodeHumanTextGapDots -
-            madeInEgyptHeightDots -
-            madeInEgyptGapAfterBarcodeDots -
-            madeInEgyptBottomMarginDots)
-        .clamp(0, labelHeightDots);
-    final barcodeY = barcodeTopY.clamp(0, maxBarcodeY);
-
-    final barcodeDigitsY = barcodeY + barcodeHeight + barcodeHumanTextGapDots;
     final madeInEgyptY = (barcodeDigitsY +
             barcodeHumanTextHeightDots +
             madeInEgyptGapAfterBarcodeDots)
@@ -264,6 +285,9 @@ class TsplLabelBuilder {
           labelHeightDots - madeInEgyptHeightDots - madeInEgyptBottomMarginDots,
         );
 
+    // ============================================================
+    // TSPL commands
+    // ============================================================
     _addCommand(
       result,
       'SIZE ${LabelDimensions.widthMm.toStringAsFixed(1)} mm,${LabelDimensions.heightMm.toStringAsFixed(1)} mm',
@@ -300,7 +324,7 @@ class TsplLabelBuilder {
       _addRaw(result, '\r\n');
     }
 
-    /// ✅ BARCODE (في المنتصف + عرض ثابت)
+    /// ✅ BARCODE (في المنتصف رأسيًا وأفقيًا بعرض ثابت)
     _addCommand(
       result,
       'BARCODE $barcodeX,$barcodeY,"$barcodeType",$barcodeHeight,0,0,$narrow,$wide,"$barcode"',
@@ -312,6 +336,7 @@ class TsplLabelBuilder {
       'BLOCK $barcodeX,$barcodeDigitsY,$barcodeWidth,$barcodeHumanTextHeightDots,"3",0,1,1,1,"$barcode"',
     );
 
+    /// MADE IN EGYPT
     _addRaw(
       result,
       'BITMAP $madeInEgyptX,$madeInEgyptY,$madeInEgyptWidthBytes,$madeInEgyptHeightDots,0,',
@@ -792,18 +817,19 @@ class TsplLabelBuilder {
     required String barcodeType,
     required int targetWidthDots,
   }) {
+    final minNarrow = barcodeType == '128' ? 2 : 2;
     const maxNarrow = 16;
     const maxWide128 = 34;
     final baseW = _estimateBarcodeWidthDots(
       barcode,
       barcodeType: barcodeType,
       narrow: 3,
-      wide: barcodeType == '128' ? 6 : 3,
+      wide: barcodeType == '128' ? 4 : 3,
     );
     final scale = targetWidthDots / baseW;
-    var narrow = (3 * scale).round().clamp(3, maxNarrow);
+    var narrow = (3 * scale).round().clamp(minNarrow, maxNarrow);
     var wide =
-        barcodeType == '128' ? (narrow * 2).clamp(6, maxWide128) : narrow;
+        barcodeType == '128' ? (narrow * 2).clamp(4, maxWide128) : narrow;
 
     int currentWidth() => _estimateBarcodeWidthDots(
       barcode,
@@ -815,16 +841,16 @@ class TsplLabelBuilder {
     while (currentWidth() < targetWidthDots && narrow < maxNarrow) {
       narrow++;
       if (barcodeType == '128') {
-        wide = (narrow * 2).clamp(6, maxWide128);
+        wide = (narrow * 2).clamp(4, maxWide128);
       } else {
         wide = narrow;
       }
     }
 
-    while (narrow > 3 && currentWidth() > targetWidthDots) {
+    while (narrow > minNarrow && currentWidth() > targetWidthDots) {
       narrow--;
       if (barcodeType == '128') {
-        wide = (narrow * 2).clamp(6, maxWide128);
+        wide = (narrow * 2).clamp(4, maxWide128);
       } else {
         wide = narrow;
       }
