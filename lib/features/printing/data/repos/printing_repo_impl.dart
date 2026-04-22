@@ -14,15 +14,16 @@ class PrintingRepoImpl implements PrintingRepo {
   pw.Font? _notoArabicRegular;
   pw.Font? _notoArabicBold;
   pw.MemoryImage? _logoImage;
+  pw.MemoryImage? _madeInEgyptImage;
 
   List<pw.Font> get _fallbackFonts => [
-        _arabicRegular!,
-        _arabicBold!,
-        _notoArabicRegular!,
-        _notoArabicBold!,
-        pw.Font.helvetica(),
-        pw.Font.helveticaBold(),
-      ];
+    _arabicRegular!,
+    _arabicBold!,
+    _notoArabicRegular!,
+    _notoArabicBold!,
+    pw.Font.helvetica(),
+    pw.Font.helveticaBold(),
+  ];
 
   Future<void> _loadAssets() async {
     _arabicRegular ??= await PdfGoogleFonts.tajawalRegular();
@@ -32,6 +33,14 @@ class PrintingRepoImpl implements PrintingRepo {
     if (_logoImage == null) {
       final logoData = await rootBundle.load('assets/images/logo.png');
       _logoImage = pw.MemoryImage(logoData.buffer.asUint8List());
+    }
+    if (_madeInEgyptImage == null) {
+      final madeInEgyptImageData = await rootBundle.load(
+        'assets/images/made_in_egypt.jpeg',
+      );
+      _madeInEgyptImage = pw.MemoryImage(
+        madeInEgyptImageData.buffer.asUint8List(),
+      );
     }
   }
 
@@ -44,7 +53,6 @@ class PrintingRepoImpl implements PrintingRepo {
     required int quantity,
   }) async {
     await _loadAssets();
-
     final pdf = pw.Document();
 
     final pageFormat = PdfPageFormat(
@@ -75,37 +83,35 @@ class PrintingRepoImpl implements PrintingRepo {
                 mainAxisSize: pw.MainAxisSize.min,
                 children: [
                   // Temporarily hide all non-barcode content in the PDF label.
-                  // pw.Image(
-                  //   _logoImage!,
-                  //   width: 45 * PdfPageFormat.mm,
-                  //   fit: pw.BoxFit.contain,
-                  // ),
-                  // pw.SizedBox(height: 14),
-                  // pw.SizedBox(
-                  //   width: double.infinity,
-                  //   child: pw.Text(
-                  //     productName,
-                  //     style: productNameStyle,
-                  //     textAlign: pw.TextAlign.center,
-                  //     textDirection: pw.TextDirection.rtl,
-                  //     maxLines: 3,
-                  //     overflow: pw.TextOverflow.clip,
-                  //   ),
-                  // ),
-                  // if (variantName != null && variantName.isNotEmpty) ...[
-                  //   pw.SizedBox(height: 6),
-                  //   pw.SizedBox(
-                  //     width: double.infinity,
-                  //     child: pw.Text(
-                  //       variantName,
-                  //       style: variantStyle,
-                  //       textAlign: pw.TextAlign.center,
-                  //       textDirection: pw.TextDirection.rtl,
-                  //       maxLines: 2,
-                  //       overflow: pw.TextOverflow.clip,
-                  //     ),
-                  //   ),
-                  // ],
+                  pw.Image(
+                    _logoImage!,
+                    width: 45 * PdfPageFormat.mm,
+                    fit: pw.BoxFit.contain,
+                  ),
+                  pw.SizedBox(height: 14),
+                  pw.SizedBox(
+                    width: double.infinity,
+                    child: pw.Text(
+                      productName,
+                      textAlign: pw.TextAlign.center,
+                      textDirection: pw.TextDirection.rtl,
+                      maxLines: 3,
+                      overflow: pw.TextOverflow.clip,
+                    ),
+                  ),
+                  if (variantName != null && variantName.isNotEmpty) ...[
+                    pw.SizedBox(height: 6),
+                    pw.SizedBox(
+                      width: double.infinity,
+                      child: pw.Text(
+                        variantName,
+                        textAlign: pw.TextAlign.center,
+                        textDirection: pw.TextDirection.rtl,
+                        maxLines: 2,
+                        overflow: pw.TextOverflow.clip,
+                      ),
+                    ),
+                  ],
                   pw.BarcodeWidget(
                     barcode: barcodeType,
                     data: barcode,
@@ -113,6 +119,11 @@ class PrintingRepoImpl implements PrintingRepo {
                     height: 16 * PdfPageFormat.mm,
                     drawText: true,
                     textStyle: barcodeTextStyle,
+                  ),
+                  pw.Image(
+                    _madeInEgyptImage!,
+                    width: 45 * PdfPageFormat.mm,
+                    fit: pw.BoxFit.contain,
                   ),
                 ],
               ),

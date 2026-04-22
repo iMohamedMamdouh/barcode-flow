@@ -48,6 +48,8 @@ class AttributeTranslator {
     'movable': 'متحرك',
     'and': 'و',
     'or': 'أو',
+    ')': '(',
+    '(': ')',
   };
 
   static String translate(String input) {

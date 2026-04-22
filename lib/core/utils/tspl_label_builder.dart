@@ -39,15 +39,6 @@ class TsplLabelBuilder {
     return aligned.clamp(0, maxX);
   }
 
-  /// Centers native `BARCODE` horizontally with equal leftover margin on left/right (no 8-dot snap).
-  static int _centerBarcodeX(int barcodeWidthDots) {
-    if (barcodeWidthDots <= 0 || barcodeWidthDots >= labelWidthDots) {
-      return 0;
-    }
-    final maxX = labelWidthDots - barcodeWidthDots;
-    return maxX ~/ 2;
-  }
-
   static Future<List<int>> buildFromPdf(
     Uint8List pdfData, {
     int quantity = 1,
@@ -105,70 +96,86 @@ class TsplLabelBuilder {
     double gapMm = 3.0,
     int density = 8,
     int threshold = 128,
-    int horizontalMarginDots = 16,
+
+    // 👇 تتحكم في عرض الباركود من هنا
+    int fixedBarcodeWidth = 240,
   }) async {
-    assert(
-      horizontalMarginDots >= 0,
-      'horizontalMarginDots must be non-negative',
-    );
     await _loadResources();
 
     final result = <int>[];
     final densityValue = density.clamp(1, 15);
+
     final barcodeType = _detectTsplBarcodeType(barcode);
+
     final barcodeHeight = (labelHeightDots * 0.24).round().clamp(130, 300);
-    // Wider bars: slightly tighter side margins (numbers printed separately, see below).
-    final barcodeSidePaddingDots = (labelWidthDots * 0.045).round().clamp(
-      12,
-      48,
-    );
-    final barcodeTargetWidth = (labelWidthDots - 2 * barcodeSidePaddingDots)
-        .clamp(120, labelWidthDots);
+
+    // ✅ تثبيت عرض الباركود يدويًا
+    final barcodeTargetWidth = fixedBarcodeWidth.clamp(120, labelWidthDots);
+
     final scaled = _scaleBarcodeToTargetWidth(
       barcode,
       barcodeType: barcodeType,
       targetWidthDots: barcodeTargetWidth,
     );
+
     final narrow = scaled.narrow;
     final wide = scaled.wide;
     final barcodeWidth = scaled.widthDots;
-    final barcodeX = _centerBarcodeX(barcodeWidth);
+
+    // ✅ توسيط الباركود 100%
+    final barcodeX = ((labelWidthDots - barcodeWidth) ~/ 2);
+
     final textAreaWidthBytes = (labelWidthDots ~/ 8).clamp(
       1,
       labelWidthDots ~/ 8,
     );
     final textAreaWidthAlignedDots = textAreaWidthBytes * 8;
+
     final logoWidthDots = (textAreaWidthAlignedDots * 0.58).round().clamp(
       120,
       textAreaWidthAlignedDots,
     );
+
     final logoHeightDots = (logoWidthDots / _logoAspectRatio).round().clamp(
       36,
       90,
     );
+
     final logoY = (labelHeightDots * 0.045).round();
+
     final logoWidthBytes = (logoWidthDots ~/ 8).clamp(1, labelWidthDots ~/ 8);
+
     final logoWidthAlignedDots = logoWidthBytes * 8;
+
     final logoX = _centerBitmapX(logoWidthAlignedDots);
+
     final logoBitmap = await _renderLogoAsBitmap(
       widthDots: logoWidthAlignedDots,
       heightDots: logoHeightDots,
       threshold: threshold,
     );
+
     final topText =
         productName.trim().isEmpty
             ? 'Walnut shoe storage bench'
             : productName.trim();
+
     final bottomText =
         (variantName ?? '').replaceAll(RegExp(r'\s+'), ' ').trim();
+
     final hasBottomText = bottomText.isNotEmpty;
+
     final bottomTextFontSize = _resolveArabicFontSize(bottomText);
+
     const logoToProductNameGapDots = 28;
     const productNameBlockHeightDots = 82;
     const productNameToVariantGapDots = 8;
+
     final topTextY = logoY + logoHeightDots + logoToProductNameGapDots;
+
     final bottomTextWidthBytes = textAreaWidthBytes;
     final bottomTextWidthDots = textAreaWidthAlignedDots;
+
     final productNameBitmap = await _renderTextLineAsBitmap(
       text: topText,
       widthDots: bottomTextWidthDots,
@@ -180,13 +187,18 @@ class TsplLabelBuilder {
       font: _fontBold,
       fallback: [_fontRegular, _fontNotoRegular, _fontNotoBold],
     );
+
     final productNameX = _centerBitmapX(bottomTextWidthDots);
+
     final bottomTextX = _centerBitmapX(bottomTextWidthDots);
+
     final bottomTextY = (topTextY +
             productNameBlockHeightDots +
             productNameToVariantGapDots)
         .clamp(0, labelHeightDots - 280);
+
     const bottomTextHeight = 188;
+
     final bottomTextBitmap =
         hasBottomText
             ? await _renderTextLineAsBitmap(
@@ -206,6 +218,7 @@ class TsplLabelBuilder {
               lineSpacing: 1.22,
             )
             : null;
+
     final madeInEgyptWidthDots = (textAreaWidthAlignedDots * 0.54)
         .round()
         .clamp(100, textAreaWidthAlignedDots);
@@ -219,34 +232,43 @@ class TsplLabelBuilder {
     );
     final madeInEgyptWidthAlignedDots = madeInEgyptWidthBytes * 8;
     final madeInEgyptX = _centerBitmapX(madeInEgyptWidthAlignedDots);
-    final madeInEgyptY = (labelHeightDots - madeInEgyptHeightDots - 14).clamp(
-      bottomTextY + bottomTextHeight + 6,
-      labelHeightDots - madeInEgyptHeightDots,
-    );
     final madeInEgyptBitmap = await _renderMadeInEgyptAsBitmap(
       widthDots: madeInEgyptWidthAlignedDots,
       heightDots: madeInEgyptHeightDots,
       threshold: threshold,
     );
+
     const barcodeHumanTextHeightDots = 44;
     const barcodeHumanTextGapDots = 10;
+    const madeInEgyptGapAfterBarcodeDots = 28;
+    const madeInEgyptBottomMarginDots = 8;
+
     final barcodeTopY =
         hasBottomText ? (bottomTextY + bottomTextHeight + 16) : (topTextY + 92);
-    final barcodeY = barcodeTopY.clamp(
-      0,
-      (madeInEgyptY -
-              barcodeHeight -
-              barcodeHumanTextHeightDots -
-              barcodeHumanTextGapDots -
-              12)
-          .clamp(0, labelHeightDots),
-    );
+    final maxBarcodeY = (labelHeightDots -
+            barcodeHeight -
+            barcodeHumanTextHeightDots -
+            barcodeHumanTextGapDots -
+            madeInEgyptHeightDots -
+            madeInEgyptGapAfterBarcodeDots -
+            madeInEgyptBottomMarginDots)
+        .clamp(0, labelHeightDots);
+    final barcodeY = barcodeTopY.clamp(0, maxBarcodeY);
+
     final barcodeDigitsY = barcodeY + barcodeHeight + barcodeHumanTextGapDots;
+    final madeInEgyptY = (barcodeDigitsY +
+            barcodeHumanTextHeightDots +
+            madeInEgyptGapAfterBarcodeDots)
+        .clamp(
+          0,
+          labelHeightDots - madeInEgyptHeightDots - madeInEgyptBottomMarginDots,
+        );
 
     _addCommand(
       result,
       'SIZE ${LabelDimensions.widthMm.toStringAsFixed(1)} mm,${LabelDimensions.heightMm.toStringAsFixed(1)} mm',
     );
+
     _addCommand(result, 'GAP ${gapMm.toStringAsFixed(1)} mm,0');
     _addCommand(result, 'SPEED 4');
     _addCommand(result, 'DENSITY $densityValue');
@@ -255,10 +277,12 @@ class TsplLabelBuilder {
     _addCommand(result, 'CODEPAGE UTF-8');
     _addCommand(result, 'CLS');
 
+    /// LOGO
     _addRaw(result, 'BITMAP $logoX,$logoY,$logoWidthBytes,$logoHeightDots,0,');
     result.addAll(logoBitmap);
     _addRaw(result, '\r\n');
 
+    /// PRODUCT NAME
     _addRaw(
       result,
       'BITMAP $productNameX,$topTextY,$bottomTextWidthBytes,$productNameBlockHeightDots,0,',
@@ -266,6 +290,7 @@ class TsplLabelBuilder {
     result.addAll(productNameBitmap);
     _addRaw(result, '\r\n');
 
+    /// VARIANT
     if (hasBottomText && bottomTextBitmap != null) {
       _addRaw(
         result,
@@ -275,14 +300,16 @@ class TsplLabelBuilder {
       _addRaw(result, '\r\n');
     }
 
-    // readable=0: bar width scales with narrow/wide; HR text would grow with modules — avoid that.
+    /// ✅ BARCODE (في المنتصف + عرض ثابت)
     _addCommand(
       result,
       'BARCODE $barcodeX,$barcodeY,"$barcodeType",$barcodeHeight,0,0,$narrow,$wide,"$barcode"',
     );
+
+    /// الرقم تحت الباركود
     _addCommand(
       result,
-      'BLOCK 0,$barcodeDigitsY,${labelWidthDots},$barcodeHumanTextHeightDots,"3",0,1,1,2,"$barcode"',
+      'BLOCK $barcodeX,$barcodeDigitsY,$barcodeWidth,$barcodeHumanTextHeightDots,"3",0,1,1,1,"$barcode"',
     );
 
     _addRaw(
@@ -291,6 +318,7 @@ class TsplLabelBuilder {
     );
     result.addAll(madeInEgyptBitmap);
     _addRaw(result, '\r\n');
+
     _addCommand(result, 'PRINT $quantity,1');
 
     return result;
