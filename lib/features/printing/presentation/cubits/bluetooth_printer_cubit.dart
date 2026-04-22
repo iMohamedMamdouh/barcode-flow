@@ -95,8 +95,10 @@ class BluetoothPrinterCubit extends Cubit<BluetoothPrinterState> {
         debugPrint('[PRINT] Building native TSPL barcode...');
       }
 
-      final tsplBytes = TsplLabelBuilder.buildBarcodeLabel(
+      final tsplBytes = await TsplLabelBuilder.buildBarcodeLabel(
         barcode,
+        productName: productName,
+        variantName: variantName,
         quantity: quantity,
         density: density,
       );

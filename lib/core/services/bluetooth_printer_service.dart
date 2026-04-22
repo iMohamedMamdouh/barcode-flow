@@ -49,6 +49,11 @@ class BluetoothPrinterService {
     final connected = await isConnected;
     if (!connected) return false;
     try {
+      // Try one-shot first because TSPL BITMAP payloads can be corrupted
+      // when command/data boundaries are split across many writes.
+      final singleShot = await PrintBluetoothThermal.writeBytes(bytes);
+      if (singleShot) return true;
+
       const chunkSize = 500;
       for (int i = 0; i < bytes.length; i += chunkSize) {
         final end =
@@ -57,7 +62,7 @@ class BluetoothPrinterService {
         final result = await PrintBluetoothThermal.writeBytes(chunk);
         if (!result) return false;
         if (i + chunkSize < bytes.length) {
-          await Future.delayed(const Duration(milliseconds: 10));
+          await Future.delayed(const Duration(milliseconds: 20));
         }
       }
       return true;

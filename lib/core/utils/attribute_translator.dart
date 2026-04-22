@@ -46,6 +46,8 @@ class AttributeTranslator {
     'with': 'مع',
     'fixed': 'ثابت',
     'movable': 'متحرك',
+    'and': 'و',
+    'or': 'أو',
   };
 
   static String translate(String input) {
