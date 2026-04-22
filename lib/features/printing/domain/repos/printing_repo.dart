@@ -1,9 +1,11 @@
 import 'dart:typed_data';
 
+import '../../../../core/constants/label_dimensions.dart';
+
 abstract class PrintingRepo {
-  /// Current label size = 40 × 30 mm
-  static const double labelWidthMm = 40;
-  static const double labelHeightMm = 30;
+  /// Same physical size as [TsplLabelBuilder] / Bluetooth TSPL commands.
+  static const double labelWidthMm = LabelDimensions.widthMm;
+  static const double labelHeightMm = LabelDimensions.heightMm;
 
   Future<Uint8List> generatePdfLabel({
     required String productName,

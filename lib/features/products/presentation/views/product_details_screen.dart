@@ -4,10 +4,10 @@ import 'package:barcode_widget/barcode_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-import '../../../../config/routes/app_routes.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/barcode_helper.dart';
 import '../../../../core/utils/responsive_helper.dart';
+import '../widgets/print_action_dialog_widget.dart';
 import '../widgets/product_info_row_widget.dart';
 import '../widgets/quantity_selector_widget.dart';
 
@@ -205,17 +205,15 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
     return ElevatedButton.icon(
       onPressed: hasBarcode
           ? () {
-              Navigator.of(context).pushNamed(
-                AppRoutes.barcodePreview,
-                arguments: {
-                  'productName': productName,
-                  'barcode': barcode,
-                  'imageBase64': imageBase64,
-                  'variantName': attributeValues.isNotEmpty
-                      ? attributeValues.join(' • ')
-                      : null,
-                  'quantity': _quantity,
-                },
+              PrintActionDialogWidget.show(
+                context,
+                productName: productName,
+                barcode: barcode,
+                defaultCode: defaultCode,
+                imageBase64: imageBase64,
+                variantName: attributeValues.isNotEmpty
+                    ? attributeValues.join(' • ')
+                    : null,
               );
             }
           : null,
