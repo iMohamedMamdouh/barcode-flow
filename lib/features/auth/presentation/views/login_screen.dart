@@ -48,43 +48,41 @@ class LoginScreen extends StatelessWidget {
                         color: AppColors.primary,
                       ),
                       const SizedBox(height: 14),
-                      const Text(
+                      Text(
                         AppConstants.appName,
                         textAlign: TextAlign.center,
                         style: TextStyle(
-                          fontSize: 48,
+                          fontSize: 26,
                           fontWeight: FontWeight.w800,
                           color: AppColors.primary,
-                          height: 1.1,
                         ),
                       ),
                       const SizedBox(height: 6),
-                      const Text(
+                      Text(
                         AppConstants.appNameEn,
                         textAlign: TextAlign.center,
                         style: TextStyle(
+                          fontSize: 14,
                           color: AppColors.textSecondary,
-                          fontSize: 18,
-                          letterSpacing: 0.8,
+                          letterSpacing: 1.2,
                         ),
                       ),
                       const SizedBox(height: 52),
-                      const Text(
+                      Text(
                         'تسجيل الدخول',
-                        textAlign: TextAlign.center,
                         style: TextStyle(
-                          fontSize: 42,
+                          fontSize: 20,
                           fontWeight: FontWeight.w700,
-                          color: Color(0xFF202020),
+                          color: AppColors.textPrimary,
                         ),
                       ),
                       const SizedBox(height: 12),
-                      const Text(
+                      Text(
                         'أدخل بريدك وكلمة المرور المرتبطة بحساب Odoo',
-                        textAlign: TextAlign.center,
                         style: TextStyle(
+                          fontSize: 14,
                           color: AppColors.textSecondary,
-                          fontSize: 18,
+                          height: 1.4,
                         ),
                       ),
                       const SizedBox(height: 28),

@@ -54,6 +54,16 @@ class PrintingRepoImpl implements PrintingRepo {
   }) async {
     await _loadAssets();
     final pdf = pw.Document();
+    final arabicTitleStyle = pw.TextStyle(
+      font: _arabicBold,
+      fontFallback: _fallbackFonts,
+      fontSize: 15,
+    );
+    final arabicSubtitleStyle = pw.TextStyle(
+      font: _arabicRegular,
+      fontFallback: _fallbackFonts,
+      fontSize: 13,
+    );
 
     final pageFormat = PdfPageFormat(
       PrintingRepo.labelWidthMm * PdfPageFormat.mm,
@@ -74,6 +84,11 @@ class PrintingRepoImpl implements PrintingRepo {
       pdf.addPage(
         pw.Page(
           pageFormat: pageFormat,
+          theme: pw.ThemeData.withFont(
+            base: _arabicRegular!,
+            bold: _arabicBold!,
+            fontFallback: _fallbackFonts,
+          ),
           textDirection: pw.TextDirection.rtl,
           build: (pw.Context context) {
             return pw.Center(
@@ -93,6 +108,7 @@ class PrintingRepoImpl implements PrintingRepo {
                     width: double.infinity,
                     child: pw.Text(
                       productName,
+                      style: arabicTitleStyle,
                       textAlign: pw.TextAlign.center,
                       textDirection: pw.TextDirection.rtl,
                       maxLines: 3,
@@ -105,6 +121,7 @@ class PrintingRepoImpl implements PrintingRepo {
                       width: double.infinity,
                       child: pw.Text(
                         variantName,
+                        style: arabicSubtitleStyle,
                         textAlign: pw.TextAlign.center,
                         textDirection: pw.TextDirection.rtl,
                         maxLines: 2,
