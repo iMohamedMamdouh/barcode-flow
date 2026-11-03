@@ -6,6 +6,7 @@ import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 
 import '../constants/label_dimensions.dart';
+import 'label_fonts.dart';
 
 class TsplLabelBuilder {
   static const int dpi = 203;
@@ -39,45 +40,11 @@ class TsplLabelBuilder {
     return aligned.clamp(0, maxX);
   }
 
-  static Future<List<int>> buildFromPdf(
-    Uint8List pdfData, {
-    int quantity = 1,
-    double gapMm = 3.0,
-    int density = 8,
-  }) async {
-    final rasterPages = Printing.raster(
-      pdfData,
-      pages: [0],
-      dpi: dpi.toDouble(),
-    );
-
-    img.Image? labelImage;
-    await for (final page in rasterPages) {
-      final pngBytes = await page.toPng();
-      labelImage = img.decodePng(pngBytes);
-      break;
-    }
-
-    if (labelImage == null) {
-      throw Exception('Failed to rasterize PDF');
-    }
-
-    final composited = _compositeOnWhite(labelImage);
-
-    return _buildTsplBytes(
-      composited,
-      quantity: quantity,
-      gapMm: gapMm,
-      density: density,
-    );
-  }
-
-  // ignore: unused_element
   static Future<void> _loadResources() async {
-    _fontBold ??= await PdfGoogleFonts.tajawalBold();
-    _fontRegular ??= await PdfGoogleFonts.tajawalRegular();
-    _fontNotoBold ??= await PdfGoogleFonts.notoSansArabicBold();
-    _fontNotoRegular ??= await PdfGoogleFonts.notoSansArabicRegular();
+    _fontBold ??= await LabelFonts.tajawalBold();
+    _fontRegular ??= await LabelFonts.tajawalRegular();
+    _fontNotoBold ??= await LabelFonts.notoSansArabicBold();
+    _fontNotoRegular ??= await LabelFonts.notoSansArabicRegular();
     if (_logoImage == null) {
       final logoData = await rootBundle.load(_logoAssetPath);
       _logoImage = pw.MemoryImage(logoData.buffer.asUint8List());
@@ -322,130 +289,6 @@ class TsplLabelBuilder {
     _addCommand(result, 'PRINT $quantity,1');
 
     return result;
-  }
-
-  // ignore: unused_element
-  static Future<Uint8List> _renderHeaderAsBitmap({
-    required String productName,
-    String? variantName,
-    required int widthDots,
-    required int heightDots,
-    required int threshold,
-  }) async {
-    // ✅ احسب أبعاد اللوجو بالـ dots من النسبة الأصلية
-    final logoHeightDots = (heightDots * 0.30).round().clamp(40, 120);
-    final logoWidthDots = (logoHeightDots * _logoAspectRatio).round();
-
-    // ✅ لو العرض أكبر من المتاح، قلص مع الحفاظ على النسبة
-    final finalLogoWidthDots = logoWidthDots.clamp(1, widthDots);
-    final finalLogoHeightDots = (finalLogoWidthDots / _logoAspectRatio).round();
-
-    // ✅ حول dots → mm للـ PDF
-    final logoWmm = finalLogoWidthDots / dpi * 25.4;
-    final logoHmm = finalLogoHeightDots / dpi * 25.4;
-
-    final widthMm = widthDots / dpi * 25.4;
-    final heightMm = heightDots / dpi * 25.4;
-    final productFontSize = (heightMm * 0.11).clamp(8.0, 12.0);
-    final variantFontSize = (heightMm * 0.08).clamp(7.0, 10.0);
-
-    final rasterDpi = (dpi * 2).toDouble();
-    final pdf = pw.Document();
-    pdf.addPage(
-      pw.Page(
-        pageFormat: PdfPageFormat(
-          widthMm * PdfPageFormat.mm,
-          heightMm * PdfPageFormat.mm,
-          marginAll: 0,
-        ),
-        build: (_) {
-          return pw.Container(
-            width: double.infinity,
-            height: double.infinity,
-            alignment: pw.Alignment.topCenter,
-            child: pw.Column(
-              mainAxisSize: pw.MainAxisSize.min,
-              crossAxisAlignment: pw.CrossAxisAlignment.center,
-              children: [
-                if (_logoImage != null)
-                  // ✅ SizedBox بأبعاد دقيقة من النسبة الأصلية - fit.contain لضمان عدم التمديد
-                  pw.SizedBox(
-                    width: logoWmm * PdfPageFormat.mm,
-                    height: logoHmm * PdfPageFormat.mm,
-                    child: pw.Image(
-                      _logoImage!,
-                      fit: pw.BoxFit.contain, // ✅ contain وليس fill
-                    ),
-                  ),
-                pw.SizedBox(height: 2),
-                pw.Text(
-                  productName,
-                  textAlign: pw.TextAlign.center,
-                  textDirection: pw.TextDirection.rtl,
-                  maxLines: 3,
-                  overflow: pw.TextOverflow.clip,
-                  style: pw.TextStyle(
-                    font: _fontBold,
-                    fontFallback: [
-                      _fontNotoRegular!,
-                      _fontRegular!,
-                      pw.Font.helveticaBold(),
-                    ],
-                    fontSize: productFontSize,
-                  ),
-                ),
-                if (variantName != null) ...[
-                  pw.SizedBox(height: 2),
-                  pw.Text(
-                    variantName,
-                    textAlign: pw.TextAlign.center,
-                    textDirection: pw.TextDirection.rtl,
-                    maxLines: 3,
-                    overflow: pw.TextOverflow.clip,
-                    style: pw.TextStyle(
-                      font: _fontRegular,
-                      fontFallback: [
-                        _fontNotoBold!,
-                        _fontBold!,
-                        pw.Font.helvetica(),
-                      ],
-                      fontSize: variantFontSize,
-                      color: PdfColors.grey800,
-                    ),
-                  ),
-                ],
-              ],
-            ),
-          );
-        },
-      ),
-    );
-
-    final pdfBytes = await pdf.save();
-    final rasterPages = Printing.raster(pdfBytes, pages: [0], dpi: rasterDpi);
-
-    img.Image? pageImage;
-    await for (final page in rasterPages) {
-      final pngBytes = await page.toPng();
-      pageImage = img.decodePng(pngBytes);
-      break;
-    }
-
-    if (pageImage == null) {
-      return Uint8List(((widthDots + 7) ~/ 8) * heightDots);
-    }
-
-    final composited = _compositeOnWhite(pageImage);
-
-    // ✅ resize الهيدر كامل فقط - اللوجو محمي بالـ SizedBox بداخله
-    final rendered = img.copyResize(
-      composited,
-      width: widthDots,
-      height: heightDots,
-      interpolation: img.Interpolation.linear,
-    );
-
-    return _imageToMonoBitmap(rendered, threshold: threshold.clamp(0, 255));
   }
 
   static Future<Uint8List> _renderTextLineAsBitmap({
@@ -741,86 +584,12 @@ class TsplLabelBuilder {
     return 9;
   }
 
-  static Future<Uint8List> buildThermalPreviewFromPdf(
-    Uint8List pdfData, {
-    int threshold = 128,
-  }) async {
-    final rasterPages = Printing.raster(
-      pdfData,
-      pages: [0],
-      dpi: dpi.toDouble(),
-    );
-
-    img.Image? labelImage;
-    await for (final page in rasterPages) {
-      final pngBytes = await page.toPng();
-      labelImage = img.decodePng(pngBytes);
-      break;
-    }
-
-    if (labelImage == null) {
-      throw Exception('Failed to rasterize PDF');
-    }
-
-    final composited = _compositeOnWhite(labelImage);
-    final resized = img.copyResize(
-      composited,
-      width: labelWidthDots,
-      height: labelHeightDots,
-      interpolation: img.Interpolation.average,
-    );
-    final preview = _toMonochromePreviewImage(
-      resized,
-      threshold: threshold.clamp(0, 255),
-    );
-    final png = img.encodePng(preview);
-    return Uint8List.fromList(png);
-  }
-
   static img.Image _compositeOnWhite(img.Image source) {
     final w = source.width;
     final h = source.height;
     final result = img.Image(width: w, height: h);
     img.fill(result, color: img.ColorRgba8(255, 255, 255, 255));
     img.compositeImage(result, source);
-    return result;
-  }
-
-  static List<int> _buildTsplBytes(
-    img.Image image, {
-    required int quantity,
-    required double gapMm,
-    required int density,
-  }) {
-    final resized = img.copyResize(
-      image,
-      width: labelWidthDots,
-      height: labelHeightDots,
-      interpolation: img.Interpolation.average,
-    );
-
-    final monoBytes = _imageToMonoBitmap(resized);
-    final widthBytes = (labelWidthDots + 7) ~/ 8;
-
-    final result = <int>[];
-
-    _addCommand(
-      result,
-      'SIZE ${LabelDimensions.widthMm.toStringAsFixed(1)} mm,${LabelDimensions.heightMm.toStringAsFixed(1)} mm',
-    );
-    _addCommand(result, 'GAP ${gapMm.toStringAsFixed(1)} mm,0');
-    _addCommand(result, 'SPEED 4');
-    final densityValue = density.clamp(1, 15);
-    _addCommand(result, 'DENSITY $densityValue');
-    _addCommand(result, 'DIRECTION 0');
-    _addCommand(result, 'CLS');
-
-    _addRaw(result, 'BITMAP 0,0,$widthBytes,$labelHeightDots,1,');
-    result.addAll(monoBytes);
-    _addRaw(result, '\r\n');
-
-    _addCommand(result, 'PRINT $quantity,1');
-
     return result;
   }
 
@@ -892,39 +661,5 @@ class TsplLabelBuilder {
     }
 
     return data;
-  }
-
-  static img.Image _toMonochromePreviewImage(
-    img.Image image, {
-    required int threshold,
-  }) {
-    final width = image.width;
-    final height = image.height;
-    final result = img.Image(width: width, height: height);
-
-    for (int y = 0; y < height; y++) {
-      for (int x = 0; x < width; x++) {
-        final pixel = image.getPixel(x, y);
-
-        final a = pixel.a.toInt();
-        final r = pixel.r.toInt();
-        final g = pixel.g.toInt();
-        final b = pixel.b.toInt();
-
-        final rr = (r * a + 255 * (255 - a)) ~/ 255;
-        final gg = (g * a + 255 * (255 - a)) ~/ 255;
-        final bb = (b * a + 255 * (255 - a)) ~/ 255;
-        final luminance = 0.299 * rr + 0.587 * gg + 0.114 * bb;
-
-        final isBlack = luminance < threshold;
-        result.setPixel(
-          x,
-          y,
-          isBlack ? img.ColorRgb8(0, 0, 0) : img.ColorRgb8(255, 255, 255),
-        );
-      }
-    }
-
-    return result;
   }
 }

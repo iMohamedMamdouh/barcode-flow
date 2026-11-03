@@ -137,6 +137,12 @@ class _LoginFormWidgetState extends State<LoginFormWidget> {
               ],
               ElevatedButton(
                 onPressed: state.isLoading ? null : () => _submit(context),
+                style: ElevatedButton.styleFrom(
+                  minimumSize: const Size.fromHeight(60),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                ),
                 child:
                     state.isLoading
                         ? const SizedBox(
@@ -148,12 +154,6 @@ class _LoginFormWidgetState extends State<LoginFormWidget> {
                           ),
                         )
                         : const Text('تسجيل الدخول'),
-                style: ElevatedButton.styleFrom(
-                  minimumSize: const Size.fromHeight(60),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                ),
               ),
             ],
           ),

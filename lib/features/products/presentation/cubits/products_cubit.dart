@@ -83,21 +83,4 @@ class ProductsCubit extends Cubit<ProductsState> {
 
     return result;
   }
-
-  Future<void> searchFromServer(String query) async {
-    emit(const ProductsLoading());
-
-    final result = await _productsRepo.getProducts(searchQuery: query);
-
-    if (isClosed) return;
-
-    result.fold(
-      (failure) => emit(ProductsError(failure.message)),
-      (products) => emit(ProductsLoaded(
-        products: products,
-        filteredProducts: products,
-        searchQuery: query,
-      )),
-    );
-  }
 }

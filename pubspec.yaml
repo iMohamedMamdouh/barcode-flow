@@ -33,6 +33,9 @@ dependencies:
 dev_dependencies:
   flutter_test:
     sdk: flutter
+  integration_test:
+    sdk: flutter
+  crypto: ^3.0.6
   flutter_lints: ^6.0.0
   flutter_launcher_icons: ^0.14.4
 
@@ -41,6 +44,10 @@ flutter:
   assets:
     - assets/images/
     - assets/icons/
+    # UI font (picked up automatically by google_fonts, no runtime download).
+    - assets/fonts/
+    # Label fonts (PDF + TSPL rendering), see lib/core/utils/label_fonts.dart.
+    - assets/fonts/label/
 
 flutter_launcher_icons:
   android: true

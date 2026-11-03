@@ -1,11 +1,9 @@
-import 'dart:typed_data';
-
 import 'package:flutter/services.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
-import 'package:printing/printing.dart';
 
 import '../../../../core/utils/barcode_helper.dart';
+import '../../../../core/utils/label_fonts.dart';
 import '../../domain/repos/printing_repo.dart';
 
 class PrintingRepoImpl implements PrintingRepo {
@@ -26,10 +24,10 @@ class PrintingRepoImpl implements PrintingRepo {
   ];
 
   Future<void> _loadAssets() async {
-    _arabicRegular ??= await PdfGoogleFonts.tajawalRegular();
-    _arabicBold ??= await PdfGoogleFonts.tajawalBold();
-    _notoArabicRegular ??= await PdfGoogleFonts.notoSansArabicRegular();
-    _notoArabicBold ??= await PdfGoogleFonts.notoSansArabicBold();
+    _arabicRegular ??= await LabelFonts.tajawalRegular();
+    _arabicBold ??= await LabelFonts.tajawalBold();
+    _notoArabicRegular ??= await LabelFonts.notoSansArabicRegular();
+    _notoArabicBold ??= await LabelFonts.notoSansArabicBold();
     if (_logoImage == null) {
       final logoData = await rootBundle.load('assets/images/logo.png');
       _logoImage = pw.MemoryImage(logoData.buffer.asUint8List());
