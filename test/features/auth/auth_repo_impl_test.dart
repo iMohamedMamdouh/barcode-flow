@@ -1,9 +1,9 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:wasilaah_finishing/core/constants/app_constants.dart';
 import 'package:wasilaah_finishing/core/errors/exceptions.dart';
 import 'package:wasilaah_finishing/core/errors/failures.dart';
 import 'package:wasilaah_finishing/core/services/auth_local_storage_service.dart';
+import 'package:wasilaah_finishing/core/tenant/tenant_config.dart';
 import 'package:wasilaah_finishing/features/auth/data/repos/auth_repo_impl.dart';
 
 import '../../support/fakes.dart';
@@ -15,22 +15,35 @@ void main() {
   late AuthLocalStorageService storage;
   late AuthRepoImpl repo;
 
+  const tenant = TenantConfig(
+    id: 'acme',
+    companyName: 'Acme',
+    odoo: OdooConnectionConfig(
+      baseUrl: 'https://odoo.acme.test',
+      database: 'acme_db',
+    ),
+  );
+
   Future<void> setUpRepo([Map<String, Object> prefs = const {}]) async {
     SharedPreferences.setMockInitialValues(prefs);
     storage = AuthLocalStorageService(await SharedPreferences.getInstance());
     odoo = FakeOdooClient();
-    repo = AuthRepoImpl(odooClient: odoo, localStorage: storage);
+    repo = AuthRepoImpl(
+      odooClient: odoo,
+      localStorage: storage,
+      tenant: tenant,
+    );
   }
 
-  test('login authenticates against the configured Odoo server', () async {
+  test("login authenticates against the tenant's Odoo server", () async {
     await setUpRepo();
 
     final result = await repo.login(username: ' a@b.com ', password: 'pw');
 
     expect(result.isRight(), isTrue);
     expect(odoo.calls.single, {
-      'url': AppConstants.odooUrl,
-      'db': AppConstants.odooDatabase,
+      'url': 'https://odoo.acme.test',
+      'db': 'acme_db',
       'login': 'a@b.com',
       'password': 'pw',
     });

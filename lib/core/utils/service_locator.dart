@@ -10,11 +10,17 @@ import '../../features/printing/domain/repos/printing_repo.dart';
 import '../network/odoo_client.dart';
 import '../services/auth_local_storage_service.dart';
 import '../services/bluetooth_printer_service.dart';
+import '../tenant/default_tenant.dart';
+import '../tenant/tenant_config.dart';
 
 final sl = GetIt.instance;
 
-void setupServiceLocator({required SharedPreferences prefs}) {
+void setupServiceLocator({
+  required SharedPreferences prefs,
+  TenantConfig tenant = DefaultTenant.config,
+}) {
   sl.registerLazySingleton<SharedPreferences>(() => prefs);
+  sl.registerLazySingleton<TenantConfig>(() => tenant);
   sl.registerLazySingleton<OdooClient>(() => OdooClient());
   sl.registerLazySingleton<AuthLocalStorageService>(
     () => AuthLocalStorageService(sl<SharedPreferences>()),
@@ -23,6 +29,7 @@ void setupServiceLocator({required SharedPreferences prefs}) {
     () => AuthRepoImpl(
       odooClient: sl<OdooClient>(),
       localStorage: sl<AuthLocalStorageService>(),
+      tenant: sl<TenantConfig>(),
     ),
   );
 

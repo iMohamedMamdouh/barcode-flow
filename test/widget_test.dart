@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:wasilaah_finishing/core/constants/app_constants.dart';
 import 'package:wasilaah_finishing/core/utils/service_locator.dart';
 import 'package:wasilaah_finishing/main.dart';
 
@@ -15,7 +16,7 @@ void main() {
       (tester) async {
     await tester.pumpWidget(const WasilaahApp());
     await tester.pump();
-    expect(find.text('تغليف وسيلة'), findsOneWidget);
+    expect(find.text(AppConstants.appName), findsOneWidget);
     expect(find.text('جارٍ التحقق من الجلسة...'), findsOneWidget);
 
     // Splash waits 1.5s before checking the session.

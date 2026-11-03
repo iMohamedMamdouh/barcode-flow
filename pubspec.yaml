@@ -1,5 +1,5 @@
 name: wasilaah_finishing
-description: "Wasila Packaging - Barcode label printing app integrated with Odoo ERP"
+description: "Barcode Flow - barcode label printing for any company on Odoo ERP"
 publish_to: 'none'
 version: 1.0.0+1
 
